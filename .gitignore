@@ -1,0 +1,25 @@
+# Data and run artifacts are rebuilt, never committed (see README "Rebuild the data")
+data/
+runs/
+mlruns/
+*.parquet
+*.zip
+
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.hypothesis/
+
+# LaTeX build products (the compiled PDF is kept: report/main.pdf)
+report/*.aux
+report/*.log
+report/*.out
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+
+# Keep committed: trials/trials.jsonl, oos.lock, config/, uv.lock
