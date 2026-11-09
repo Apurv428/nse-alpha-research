@@ -1,0 +1,143 @@
+"""`qr ledger`: RESULTS.md and report/numbers.tex, generated from run artifacts only (non-negotiable 4).
+
+Every row names its source file and key. A number whose file or key does not exist prints "not run". Nothing here is typed by hand;
+the report and README may only show results through `\\res{id}` (report) or the generated README block.
+"""
+from __future__ import annotations
+
+import csv
+import json
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+NOT_RUN = "not run"
+
+
+def _latest(runs: Path, pattern: str) -> Path | None:
+    c = sorted(Path(runs).glob(pattern))
+    return c[-1] if c else None
+
+
+def _json(p: Path):
+    return json.loads(p.read_text()) if p and p.exists() else None
+
+
+def _dig(obj, path):
+    for k in path:
+        if obj is None:
+            return None
+        obj = obj.get(k) if isinstance(obj, dict) else None
+    return obj
+
+
+def _costs(p: Path, book: str, what: str):
+    if not p or not p.exists():
+        return None
+    rows = list(csv.DictReader(p.open()))
+    r = next((x for x in rows if x["book"] == book), None)
+    if r is None:
+        return None
+    comp = {k: float(v) for k, v in r.items() if k.startswith("drag_bp_pa_")}
+    tot = sum(comp.values())
+    return tot if what == "total" else (100.0 * comp["drag_bp_pa_stt"] / tot if tot else None)
+
+
+# (id, description, window, kind, dir pattern, file, key path / extra)
+DEV = "2017-01-02 -> 2024-10-31"
+REG = [
+    ("data.n_sessions", "NSE sessions in the panel", "2012-2026", "json", "data_qa", "gate_report.json", ("n_sessions",)),
+    ("data.n_sids", "Securities in the master", "2012-2026", "json", "data_qa", "gate_report.json", ("n_sids",)),
+    ("data.n_delisted_in_univ", "Later-delisted names that were in the universe", "2012-2026", "json", "data_qa", "gate_report.json", ("n_delisted_in_univ",)),
+    ("sig.best_neu.name", "Strongest neutralized signal (h=5)", "2013-2024", "json", "eval_*", "metrics.json", ("sig.best_neu.name",)),
+    ("sig.best_neu.rank_ic_h5", "Its mean rank IC (h=5)", "2013-2024", "json", "eval_*", "metrics.json", ("sig.best_neu.rank_ic_h5",)),
+    ("sig.best_neu.t_nw_h5", "Its Newey-West t (h=5)", "2013-2024", "json", "eval_*", "metrics.json", ("sig.best_neu.t_nw_h5",)),
+    ("sig.n_pass_holm_t3", "Signal tests passing Holm and t>=3", "2013-2024", "json", "eval_*", "metrics.json", ("sig.n_pass_holm_t3",)),
+    ("sig.max_rank_ic_h5", "Largest mean rank IC of any signal (h=5)", "2013-2024", "json", "eval_*", "metrics.json", ("sig.max_rank_ic_h5",)),
+    ("combo.headline", "Headline combiner chosen by the pre-registered rule", DEV, "json", "combo_*", "metrics.json", ("combo.headline",)),
+    ("combo.headline.rank_ic", "Headline combiner mean rank IC (h=5, walk-forward)", DEV, "json", "combo_*", "metrics.json", ("combo.headline.rank_ic",)),
+    ("combo.ew.rank_ic", "Equal-weight mean rank IC (h=5, walk-forward)", DEV, "json", "combo_*", "metrics.json", ("combo.ew.rank_ic",)),
+    ("combo.diff_vs_ew.t_nw", "Candidate minus EW, Newey-West t", DEV, "json", "combo_*", "metrics.json", ("combo.diff_vs_ew.t_nw",)),
+]
+for book, main in (("p1", "ir"), ("p2", "sharpe")):
+    for tag, win, d in (("dev", DEV, "portfolios_*"), ("oos", "2024-11-01 -> 2026-10-30", "oos")):
+        base = ("json", d, "metrics.json")
+        REG += [
+            (f"{book}.{tag}.{main}_net", f"{book.upper()} net {'IR vs Nifty 500 TRI' if book == 'p1' else 'Sharpe on capital'}", win, *base, (f"{book}.{tag}.{main}_net",)),
+            (f"{book}.{tag}.{main}_gross", f"{book.upper()} gross {'IR' if book == 'p1' else 'Sharpe'}", win, *base, (f"{book}.{tag}.{main}_gross",)),
+            (f"{book}.{tag}.cagr_net", f"{book.upper()} net CAGR", win, *base, (f"{book}.{tag}.cagr_net",)),
+            (f"{book}.{tag}.max_drawdown_net", f"{book.upper()} net max drawdown", win, *base, (f"{book}.{tag}.max_drawdown_net",)),
+            (f"{book}.{tag}.turnover_oneway_pa", f"{book.upper()} one-way turnover per year", win, *base, (f"{book}.{tag}.turnover_oneway_pa",)),
+            (f"{book}.{tag}.cap_unfilled_share", f"{book.upper()} share of desired trades blocked by the 10% ADV cap (Rs 1 crore)", win, *base, (f"{book}.{tag}.cap_unfilled_share",)),
+            (f"{book}.{tag}.psr0", f"{book.upper()} PSR(0)", win, *base, (f"{book}.{tag}.psr0",)),
+            (f"{book}.{tag}.cost_drag_bp", f"{book.upper()} total cost drag, bp per year", win, "costs", d, "costs.csv", (book.upper(), "total")),
+            (f"{book}.{tag}.stt_share_pct", f"{book.upper()} STT share of cost drag, %", win, "costs", d, "costs.csv", (book.upper(), "stt")),
+        ]
+    REG += [(f"{book}.dev.capacity_cr", f"{book.upper()} capacity (smaller of half-metric and 20%-cap AUM), Rs crore", DEV, "json", "portfolios_*", "metrics.json", (f"{book}.capacity", "capacity_aum_cr")),
+            (f"{book}.dev.break_even_cost_multiple", f"{book.upper()} break-even cost multiple", DEV, "json", "portfolios_*", "metrics.json", (f"{book}.break_even_cost_multiple",)),
+            (f"{book}.oos.capacity_cr", f"{book.upper()} capacity, Rs crore", "2024-11-01 -> 2026-10-30", "json", "oos", "metrics.json", (f"{book}.capacity", "capacity_aum_cr"))]
+REG += [
+    ("p1.dev.dsr", "P1 deflated Sharpe, walk-forward (N_all trials)", DEV, "json", "portfolios_*", "metrics.json", ("p1.dev.dsr_n_all",)),
+    ("honesty.n_all", "Logged trials (N_all)", DEV, "json", "portfolios_*", "honesty_p1.json", ("n_all",)),
+    ("honesty.n_eff", "Effective independent trials (N_eff, rho>0.7)", DEV, "json", "portfolios_*", "honesty_p1.json", ("n_eff",)),
+    ("p1.oos.ir_net.ci95_lo", "P1 OOS net IR, bootstrap 95% CI low", "2024-11-01 -> 2026-10-30", "json", "oos", "honesty_p1.json", ("bootstrap_ir_annual", "ci_lo")),
+    ("p1.oos.ir_net.ci95_hi", "P1 OOS net IR, bootstrap 95% CI high", "2024-11-01 -> 2026-10-30", "json", "oos", "honesty_p1.json", ("bootstrap_ir_annual", "ci_hi")),
+    ("p2.oos.sharpe_net.ci95_lo", "P2 OOS net Sharpe, bootstrap 95% CI low", "2024-11-01 -> 2026-10-30", "json", "oos", "honesty_p2.json", ("bootstrap_sharpe_annual", "ci_lo")),
+    ("p2.oos.sharpe_net.ci95_hi", "P2 OOS net Sharpe, bootstrap 95% CI high", "2024-11-01 -> 2026-10-30", "json", "oos", "honesty_p2.json", ("bootstrap_sharpe_annual", "ci_hi")),
+    ("oos.score.mean_rank_ic_h5", "Frozen score, OOS mean rank IC (h=5)", "2024-11-01 -> 2026-10-30", "json", "oos", "metrics.json", ("score.oos.mean_rank_ic_h5",)),
+    ("oos.score.t_nw_h5", "Frozen score, OOS Newey-West t (h=5)", "2024-11-01 -> 2026-10-30", "json", "oos", "metrics.json", ("score.oos.t_nw_h5",)),
+]
+IDS = {r[0] for r in REG}
+
+
+def resolve(row, runs: Path):
+    _id, _desc, _win, kind, dpat, fname, path = row
+    d = (Path(runs) / dpat) if "*" not in dpat else _latest(runs, dpat)
+    if d is None or not Path(d).exists():
+        return NOT_RUN, None, None
+    p = Path(d) / fname
+    v = _costs(p, path[0], path[1]) if kind == "costs" else _dig(_json(p), path)
+    sha = (_json(p) or {}).get("git_sha") if kind != "costs" else (_json(p.with_name("metrics.json")) or {}).get("git_sha")
+    return (NOT_RUN if v is None else v), (str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p)), sha
+
+
+def fmt(v) -> str:
+    if v == NOT_RUN:
+        return v
+    if isinstance(v, bool):
+        return str(v)
+    if isinstance(v, int):
+        return f"{v}"
+    if isinstance(v, float):
+        return f"{v:.3f}"
+    return str(v)
+
+
+def collect(runs: Path = ROOT / "runs") -> list[dict]:
+    out = []
+    for r in REG:
+        v, src, sha = resolve(r, runs)
+        out.append({"id": r[0], "desc": r[1], "window": r[2], "value": v, "text": fmt(v), "sha": sha or "-",
+                    "source": f"{src}#{'.'.join(r[6])}" if src else "-"})
+    return out
+
+
+def _tex(s: str) -> str:
+    return s.replace("\\", r"\textbackslash{}").replace("_", r"\_").replace("%", r"\%").replace("&", r"\&").replace("->", "to")
+
+
+def write_all(runs: Path = ROOT / "runs", results: Path = ROOT / "RESULTS.md", tex: Path = ROOT / "report" / "numbers.tex") -> dict:
+    rows = collect(runs)
+    sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip() or "unknown"
+    lock = _json(ROOT / "oos.lock") or {}
+    L = ["# RESULTS ledger", "", "Generated by `qr ledger` from files under `runs/` (git-ignored; rebuild with the README commands). "
+         "Every value traces to the file named in its Source column, produced at the git SHA in the last column (the SHA each run recorded about itself); \"not run\" means the file or key does not exist. "
+         f"Generated at git `{sha}`; OOS lock state: `{lock.get('state', 'unknown')}`.", "",
+         "| ID | Description | Window | Value | Source | Git SHA |", "| --- | --- | --- | --- | --- | --- |"]
+    L += [f"| `{r['id']}` | {r['desc']} | {r['window']} | {r['text']} | `{r['source']}` | `{r['sha']}` |" for r in rows]
+    Path(results).write_text("\n".join(L) + "\n")
+    T = ["% generated by `qr ledger`; do not edit", r"\newcommand{\res}[1]{\csname res@#1\endcsname}"]
+    T += [r"\expandafter\def\csname res@%s\endcsname{%s}" % (r["id"], _tex(r["text"])) for r in rows]
+    Path(tex).parent.mkdir(parents=True, exist_ok=True)
+    Path(tex).write_text("\n".join(T) + "\n")
+    return {"n_rows": len(rows), "n_not_run": sum(r["text"] == NOT_RUN for r in rows)}

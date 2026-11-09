@@ -11,7 +11,7 @@ import numpy as np
 import polars as pl
 
 from qr.eval import turnover as T
-from qr.guard.trial_ledger import log_trial
+from qr.guard.trial_ledger import git_state, log_trial
 from qr.panel import io
 from qr.portfolio import capacity as K
 from qr.portfolio.backtest import COMPONENTS, attach_universe, build_panel, simulate
@@ -73,7 +73,8 @@ def evaluate_books(panel, scores: dict, fwd5: pl.DataFrame, cal: pl.DataFrame, b
     """P0/P1/P2 gross and net on [first_date, last_date]; metric keys are `<book>.<tag>.<stat>_<gross|net>`.
     `log` writes the two net books to the trial ledger (development window only)."""
     kw = dict(rf_annual=RF, first_date=first_date, last_date=last_date)
-    metrics, rows = {"model": model, "window": [str(first_date), str(last_date)], "rf_annual": RF,
+    sha, dirty = git_state()
+    metrics, rows = {"git_sha": sha, "git_dirty": dirty, "model": model, "window": [str(first_date), str(last_date)], "rf_annual": RF,
                      "rf_source": "constant fallback 6.5% (no RBI T-bill series supplied)", "tri_is_approx": bool(bench["tri_is_approx"][0])}, []
     wk = T.weekly_dates(cal)
     sc_long = pl.concat([pl.DataFrame({"trade_date": [d] * int(np.isfinite(a).sum()), "sid": panel.sids[np.isfinite(a)], "signal": model, "score": a[np.isfinite(a)]})

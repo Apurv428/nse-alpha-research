@@ -16,7 +16,7 @@ from scipy.stats import binomtest
 
 from qr.eval import ic as I
 from qr.eval import turnover as T
-from qr.guard.trial_ledger import log_trial
+from qr.guard.trial_ledger import git_state, log_trial
 from qr.models import combiners as C
 from qr.models import cv
 from qr.panel import io
@@ -123,7 +123,7 @@ def run_combine(gold: Path = Path("data/gold"), silver: Path = Path("data/silver
     sc.select("trade_date", "sid", "model", "fold_id", "score").write_parquet(out / "test_scores.parquet")
     (out / "selection.json").write_text(json.dumps(sel, indent=1, default=str))
     allr = lambda m: summ.filter((pl.col("model") == m) & (pl.col("fold_id") == "all")).row(0, named=True)
-    metrics = {"combo.headline": headline, "combo.headline.rank_ic": allr(headline)["mean_rank_ic_h5"], "combo.ew.rank_ic": allr("EW")["mean_rank_ic_h5"],
+    metrics = {"git_sha": git_state()[0], "combo.headline": headline, "combo.headline.rank_ic": allr(headline)["mean_rank_ic_h5"], "combo.ew.rank_ic": allr("EW")["mean_rank_ic_h5"],
                "combo.diff_vs_ew.t_nw": comp[cand]["t_nw_diff"], "combo.candidate": cand, "combo.fill_rate": fill, "combo.trial_ids": trial_ids,
                "combo.n_folds": folds.height, "combo.n_rows": summ.height}
     (out / "metrics.json").write_text(json.dumps(metrics, indent=1, default=str))

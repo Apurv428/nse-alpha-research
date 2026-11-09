@@ -85,5 +85,7 @@ def run_qa(silver: Path = Path("data/silver"), qa: Path = Path("runs/data_qa"), 
     um = inu.join(sec, on="sid", how="left").with_columns(pl.col("month_start").dt.year().alias("year"))
     uc = um.group_by("year").agg(share_unclassified=(pl.col("industry") == "Unclassified").mean()).sort("year")
     rep["unclassified_share_by_year"] = dict(zip(uc["year"].to_list(), [round(x, 4) for x in uc["share_unclassified"].to_list()]))
+    from qr.guard.trial_ledger import git_state
+    rep["git_sha"] = git_state()[0]
     (qa / "gate_report.json").write_text(json.dumps(rep, indent=1, default=str))
     return rep

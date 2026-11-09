@@ -147,5 +147,13 @@ def oos(confirm: bool = typer.Option(False, "--confirm")) -> None:
         raise typer.Exit(2)
 
 
+@app.command()
+def ledger() -> None:
+    """Write RESULTS.md and report/numbers.tex from run artifacts ("not run" where a file or key is missing)."""
+    from qr.report.ledger import write_all
+
+    typer.echo(write_all())
+
+
 if __name__ == "__main__":
     app()

@@ -15,7 +15,7 @@ import polars as pl
 from qr.eval import decay as D
 from qr.eval import ic as I
 from qr.eval import turnover as T
-from qr.guard.trial_ledger import log_trial
+from qr.guard.trial_ledger import git_state, log_trial
 from qr.panel import io
 from qr.signals.registry import REGISTRY, dense_panel
 
@@ -75,7 +75,7 @@ def run_eval(gold: Path = Path("data/gold"), silver: Path = Path("data/silver"),
     # ---- headline metrics (flat keys; the ledger renders RESULTS.md from this file) ----
     neu5 = summary.filter((pl.col("version") == "neutral") & (pl.col("h") == 5))
     best = neu5.sort("t_nw", descending=True).row(0, named=True)
-    m = {"sig.best_neu.name": best["signal"], "sig.best_neu.rank_ic_h5": best["mean_rank_ic"], "sig.best_neu.t_nw_h5": best["t_nw"],
+    m = {"git_sha": git_state()[0], "sig.best_neu.name": best["signal"], "sig.best_neu.rank_ic_h5": best["mean_rank_ic"], "sig.best_neu.t_nw_h5": best["t_nw"],
          "sig.n_pass_holm_t3": int(holm["pass_holm_t3"].sum()), "sig.n_sig_wrong_sign": int(holm["sig_wrong_sign"].sum()),
          "sig.max_rank_ic_h5": float(summary.filter(pl.col("h") == 5)["mean_rank_ic"].max()),
          "sig.tripwire_hit": bool(summary.filter(pl.col("h") == 5)["mean_rank_ic"].max() > TRIPWIRE_RANK_IC),
