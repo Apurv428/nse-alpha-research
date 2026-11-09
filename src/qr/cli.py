@@ -111,5 +111,41 @@ def backtest() -> None:
     typer.echo(json.dumps(res, indent=1, default=str))
 
 
+@app.command()
+def freeze() -> None:
+    """Fit the headline model once on all development data, write config/frozen/, name it in oos.lock (sealed only)."""
+    import json
+
+    from qr.models.freeze import freeze as do_freeze
+    from qr.portfolio.run import latest_combo
+
+    typer.echo(json.dumps(do_freeze(latest_combo()), indent=1, default=str))
+
+
+@app.command()
+def rehearse() -> None:
+    """Mechanics rehearsal of the OOS code path on the last 52 dev weeks (sealed; numbers never reported)."""
+    import json
+
+    from qr.oos import rehearse as do
+
+    typer.echo(json.dumps(do(), indent=1, default=str))
+
+
+@app.command()
+def oos(confirm: bool = typer.Option(False, "--confirm")) -> None:
+    """THE one-time read of the locked OOS window. Needs explicit user go-ahead. Refuses on any unmet precondition."""
+    import json
+
+    from qr.guard.oos_lock import OOSLockError
+    from qr.oos import run_oos
+
+    try:
+        typer.echo(json.dumps(run_oos(confirm), indent=1, default=str))
+    except OOSLockError as e:
+        typer.echo(f"REFUSED: {e}", err=True)
+        raise typer.Exit(2)
+
+
 if __name__ == "__main__":
     app()

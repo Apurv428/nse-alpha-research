@@ -16,7 +16,7 @@ from qr.panel import io
 from qr.portfolio import capacity as K
 from qr.portfolio.backtest import COMPONENTS, attach_universe, build_panel, simulate
 from qr.portfolio.metrics import summarize, weekly
-from qr.stats.honesty import write
+from qr.stats.honesty import oos_stats, write
 
 START = dt.date(2017, 1, 2)
 TRIPWIRE_IR = 2.0
@@ -30,7 +30,11 @@ def latest_combo(runs: Path = Path("runs")) -> Path:
 
 
 def scores_by_date(combo_dir: Path, panel, model: str) -> dict:
-    sc = pl.read_parquet(combo_dir / "test_scores.parquet").filter(pl.col("model") == model)
+    return scores_from_df(pl.read_parquet(combo_dir / "test_scores.parquet").filter(pl.col("model") == model), panel)
+
+
+def scores_from_df(sc: pl.DataFrame, panel) -> dict:
+    """(trade_date, sid, score) -> {trade_date: array over panel.sids} (nan where unscored)."""
     ix = {s: i for i, s in enumerate(panel.sids.tolist())}
     out = {}
     for d, g in sc.group_by("trade_date"):
@@ -60,62 +64,69 @@ def run_books(gold=Path("data/gold"), silver=Path("data/silver"), out_root=Path(
     attach_universe(panel, universe, list(scores))
     out = Path(out_root) / f"portfolios_{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%S}"
     out.mkdir(parents=True)
-    kw = dict(rf_annual=RF, first_date=START)
-    metrics, rows, daily_out = {"model": model, "rf_annual": RF, "rf_source": "constant fallback 6.5% (no RBI T-bill series supplied)",
-                                "tri_is_approx": bool(bench["tri_is_approx"][0])}, [], {}
-    # ---- P0 paper spread (no costs) ----
-    wk = T.weekly_dates(cal)
     fwd5 = io.load_gold("fwd_returns", gold).filter(pl.col("h") == 5)
+    return evaluate_books(panel, scores, fwd5, cal, bench, out, model, "dev", START, None, sensitivities, log)
+
+
+def evaluate_books(panel, scores: dict, fwd5: pl.DataFrame, cal: pl.DataFrame, bench: pl.DataFrame, out: Path, model: str, tag: str,
+                   first_date, last_date, sensitivities: bool = True, log: bool = True) -> dict:
+    """P0/P1/P2 gross and net on [first_date, last_date]; metric keys are `<book>.<tag>.<stat>_<gross|net>`.
+    `log` writes the two net books to the trial ledger (development window only)."""
+    kw = dict(rf_annual=RF, first_date=first_date, last_date=last_date)
+    metrics, rows = {"model": model, "window": [str(first_date), str(last_date)], "rf_annual": RF,
+                     "rf_source": "constant fallback 6.5% (no RBI T-bill series supplied)", "tri_is_approx": bool(bench["tri_is_approx"][0])}, []
+    wk = T.weekly_dates(cal)
     sc_long = pl.concat([pl.DataFrame({"trade_date": [d] * int(np.isfinite(a).sum()), "sid": panel.sids[np.isfinite(a)], "signal": model, "score": a[np.isfinite(a)]})
-                         for d, a in scores.items() if d >= START])
+                         for d, a in scores.items() if d >= first_date and (last_date is None or d <= last_date)])
     p0 = T.spread_series(T.deciles(sc_long, fwd5, "score", wk)).select("date", "ret")
     metrics["p0.sharpe_gross"] = float(p0["ret"].mean() / p0["ret"].std() * np.sqrt(52))
     metrics["p0.n_weeks"] = p0.height
     p0.write_parquet(out / "p0_weekly.parquet")
-    # ---- P1 / P2 gross and net ----
     for book in ("P1", "P2"):
+        b = book.lower()
         res = {}
-        for tag, cm in (("gross", 0.0), ("net", 1.0)):
+        for t_, cm in (("gross", 0.0), ("net", 1.0)):
             o = simulate(panel, scores, book, cost_mult=cm, **kw)
             m = summarize(o["daily"], _bench_for(panel, o["daily"]) if book == "P1" else None, RF)
-            res[tag] = (o, m)
-            o["daily"].write_parquet(out / f"{book.lower()}_{tag}_daily.parquet")
+            res[t_] = (o, m)
+            o["daily"].write_parquet(out / f"{b}_{t_}_daily.parquet")
             for k, v in m.items():
-                metrics[f"{book.lower()}.dev.{k}_{tag}"] = v
+                metrics[f"{b}.{tag}.{k}_{t_}"] = v
         o, _ = res["net"]
-        metrics[f"{book.lower()}.dev.turnover_oneway_pa"] = o["turnover_oneway_pa"]
-        metrics[f"{book.lower()}.dev.cap_unfilled_share"] = o["cap_unfilled_share"]
+        metrics[f"{b}.{tag}.turnover_oneway_pa"] = o["turnover_oneway_pa"]
+        metrics[f"{b}.{tag}.cap_unfilled_share"] = o["cap_unfilled_share"]
         rows.append({"book": book, **{f"drag_bp_pa_{k}": v for k, v in o["drag_bp_pa"].items()}})
-        main = "ir" if book == "P1" else "sharpe"
-        metrics[f"{book.lower()}.dev.tripwire"] = bool(book == "P1" and res["net"][1]["ir"] > TRIPWIRE_IR)
-        # logged trial: net weekly active (P1) / excess (P2) return
-        d = res["net"][0]["daily"].drop_nulls("ret")
+        metrics[f"{b}.{tag}.tripwire"] = bool(tag == "dev" and book == "P1" and res["net"][1]["ir"] > TRIPWIRE_IR)
+        d = o["daily"].drop_nulls("ret")
         if book == "P1":
-            b = _bench_for(panel, res["net"][0]["daily"])
-            d = d.with_columns(pl.Series("ret", d["ret"].to_numpy() - b[-d.height:]))
+            bb = _bench_for(panel, o["daily"])
+            d = d.with_columns(pl.Series("ret", d["ret"].to_numpy() - bb[-d.height:]))
         else:
             d = d.with_columns(pl.col("ret") - RF / 252)
         w = weekly(d)
-        w.write_parquet(out / f"{book.lower()}_net_weekly_{'active' if book == 'P1' else 'excess'}.parquet")
+        w.write_parquet(out / f"{b}_net_weekly_{'active' if book == 'P1' else 'excess'}.parquet")
         if log:
             rec = log_trial("portfolio", {"book": book, "model": model, "enter": 0.10, "keep": 0.20, "cost": "costs.yaml base", "Y": 1.0,
                                           "aum_cr": 1.0, "rf": RF}, (str(w["date"].min()), str(w["date"].max())), "W", w, None, None)
-            metrics[f"{book.lower()}.dev.trial_id"] = rec["trial_id"]
-            hon = write(w, out / f"honesty_{book.lower()}.json", active=(book == "P1"))   # after logging: N_all includes this trial
-            metrics[f"{book.lower()}.dev.dsr_n_all"] = hon.get("dsr_n_all", {}).get("dsr")
-            metrics[f"{book.lower()}.dev.psr0"] = hon["psr0"]
-        # capacity and break-even
+            metrics[f"{b}.{tag}.trial_id"] = rec["trial_id"]
+            hon = write(w, out / f"honesty_{b}.json", active=(book == "P1"))   # after logging: N_all includes this trial
+            metrics[f"{b}.{tag}.dsr_n_all"] = hon.get("dsr_n_all", {}).get("dsr")
+            metrics[f"{b}.{tag}.psr0"] = hon["psr0"]
+        else:
+            st = oos_stats(w, active=(book == "P1"))
+            (out / f"honesty_{b}.json").write_text(json.dumps(st, indent=1, default=str))
+            metrics[f"{b}.{tag}.psr0"] = st["psr0"]
         g = K.capacity_grid(panel, scores, book, **kw)
-        g.write_csv(out / f"capacity_{book.lower()}.csv")
-        metrics[f"{book.lower()}.capacity"] = K.capacity_from_grid(g)
-        metrics[f"{book.lower()}.break_even_cost_multiple"] = K.break_even_multiple(panel, scores, book, **kw)
+        g.write_csv(out / f"capacity_{b}.csv")
+        metrics[f"{b}.capacity"] = K.capacity_from_grid(g)
+        metrics[f"{b}.break_even_cost_multiple"] = K.break_even_multiple(panel, scores, book, **kw)
         if sensitivities:
             sens = []
             for name, extra in [("brokerage_0bp", {"brokerage_bp": 0}), ("brokerage_5bp", {"brokerage_bp": 5}), ("Y_0.5", {"Y": 0.5}),
                                 ("Y_2.0", {"Y": 2.0}), ("haircut_30pct", {"haircut": 0.3}), ("cost_x2", {"cost_mult": 2.0})]:
                 oo = simulate(panel, scores, book, **{**kw, **extra})
                 sens.append({"book": book, "case": name, "metric": K.headline_metric(book, K._stat(book, oo, panel, RF)), "cagr": summarize(oo["daily"], None, RF)["cagr"]})
-            pl.DataFrame(sens).write_csv(out / f"sensitivities_{book.lower()}.csv")
+            pl.DataFrame(sens).write_csv(out / f"sensitivities_{b}.csv")
     pl.DataFrame(rows).write_csv(out / "costs.csv")
     (out / "metrics.json").write_text(json.dumps(metrics, indent=1, default=str))
     return {"out": str(out), **metrics}

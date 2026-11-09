@@ -59,3 +59,13 @@ def write(weekly: pl.DataFrame, path: Path, **kw) -> dict:
     res = honesty(weekly, **kw)
     Path(path).write_text(json.dumps(res, indent=1, default=str))
     return res
+
+
+def oos_stats(weekly: pl.DataFrame, active: bool = False, B_: int = 10_000) -> dict:
+    """OOS window: one pre-declared strategy tested once, so PSR(0) and bootstrap CIs only (no deflation)."""
+    r = weekly["ret"].to_numpy()
+    m = L.sharpe_moments(r)
+    stat = B.stat_ir if active else B.stat_sharpe
+    return {"n_obs": m["n_obs"], "sr_weekly": m["sr"], "sr_annual": m["sr"] * np.sqrt(52), "skew": m["skew"], "kurt": m["kurt"],
+            "psr0": D.psr(m["sr"], m["n_obs"], m["skew"], m["kurt"], 0.0),
+            "bootstrap_" + ("ir" if active else "sharpe") + "_annual": B.bootstrap_ci(r, (lambda a: stat(a, 52.0)), mean_block=4.0, B=B_)}
