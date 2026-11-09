@@ -43,3 +43,36 @@ then 2012-2015, so the PRD fallback "start in 2016" stays available if the 2012-
 
 ## D-009 — Index name changed in 2013 (Day 1)
 `ind_close_all` calls the benchmark "S&P CNX 500" in 2013 and "Nifty 500" later; the benchmark builder maps both.
+
+## D-010 — Rights issues left unadjusted (Day 1)
+PRD s4 needs the face value at the time of the rights issue (issue price S = FV + premium); the export has no FV and the
+EQUITY_L snapshot only has today's. Rights are parsed and counted but NOT price-adjusted (PRD Day 1 cut-list item 2). Any
+day with |r| > 25% on a name with an unadjusted event is nulled and logged (`unadjusted_event_nulled`). Counts go to RESULTS.md.
+
+## D-011 — Demerger exclusion is past-only (Day 1)
+PRD: exclude a demerged sid 5 sessions either side of the ex-date. The universe is rebuilt monthly on data up to the prior
+close, and a future ex-date is not point-in-time information in our data (the export has no announcement date). So the
+universe excludes only sids with a demerger ex-date in the last 5 sessions before the as-of date; the ex-date return itself is nulled.
+
+## D-012 — Link rule (a) does not require a corporate-actions file (Day 1)
+PRD: link a same-symbol / new-ISIN pair when it follows a split/bonus/demerger within 5 sessions. Implemented as: same symbol,
+new ISIN, no overlapping trading and <= 5 sessions between old last trade and new first trade. When a corporate-actions export
+is present the reason string also records `+corp_action` if one explains it. Rationale: a CA-gated rule would silently drop
+every ISIN-change link if the export is incomplete. A reused symbol after a long gap is correctly NOT linked (tested).
+
+## D-013 — Jump-audit resolution rules (Day 1)
+|r| > 25% after adjustment is flagged and resolved as: `halt_gap_kept` (the name did not trade for >= 1 session: a multi-day
+move is real), `demerger_nulled`, `unadjusted_event_nulled` (rights etc.), `action_residual_nulled` (an adjusted action still
+leaves a big move: wrong ratio), else `unexplained_nulled`. Nulled returns are missing observations, never zeros. The audit
+uses only row-t data, so it is point-in-time. Real large moves that are nulled are a limitation (counts reported).
+
+## D-014 — "20 hand-checked actions" (Day 1)
+No independent source of 20 verified corporate actions is available offline, and typing them from memory would be
+unverifiable. The gate check is therefore: the 20 most liquid split/bonus events in the development window (selected by
+code from the export) must have |r| < 20% on the ex-date with a non-null return, plus the two named PRD examples (IRCTC
+2021-10-28, INFY 2018-09-04). The list is printed in `runs/data_qa/gate_report.json` for the user to eyeball. This is an
+automated spot check, not a manual verification, and is described that way in RESULTS.md.
+
+## D-015 — Series kept in bronze (Day 1)
+Bronze keeps only EQ, BE, BZ rows (PRD fixed decision "Price rows kept") and stock futures (FUTSTK / STF). Other series (SME,
+gold bonds, G-secs, N-series debt) are dropped at parse time.
