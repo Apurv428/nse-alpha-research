@@ -24,6 +24,13 @@ _Read this first in a new session. Update at the end of every working session._
 - Silver: security master + links, split/bonus/dividend-adjusted total returns, jump audit, PIT universe, fut_cont, bench (approx TRI), sectors, QA gate report.
 - 117 tests pass; `tests/test_parsers_overlap.py::test_legacy_udiff_agree_on_overlap` fails until the 2024 overlap files are downloaded (by design: it fails rather than skips).
 
+## Real-data dry run (2026-11-10, partial download 2016-01 .. 2019-06, scratch dir, deleted afterwards)
+- bronze -> silver -> qa -> gold -> cost inputs -> backtest panel all run on real files. NO IC, backtest or performance number was computed.
+- Bugs found and fixed: (1) QA/silver label counts were paired with the wrong labels (two `value_counts()` calls, unstable order);
+  (2) `build_panel` assumed a `sess` column in `silver.fut_cont` (real table is keyed by trade_date). Tests updated to the real schema.
+- Observed: ~1,670 unexplained >25% jumps in 3.5 partial years (no corporate-action file yet; the rest were partial-download gap artifacts);
+  Unclassified sector share 34-47% of the universe in 2017-2019 (2026 snapshot; PRD limitation, report it); F&O names in universe ~174 (2017).
+
 ## Next
 1. Wait for download; relaunch the job if it stops. When complete: `qr bronze all && qr panel && qr qa`, read `runs/data_qa/gate_report.json`.
 2. USER ACTION needed: drop the yearly corporate-action CSV exports into `data/raw/corpactions/` (via `D:\QR\manual\corpactions\`).

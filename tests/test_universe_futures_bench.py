@@ -107,3 +107,12 @@ def test_bench_tri_formula_and_name_mapping():
     assert b["n500_tri"][1] == pytest.approx(100.0 * (101 / 100 + 1.26 / 25200))  # TRI_t uses DY_{t-1}
     assert b["n500_tri"][2] == pytest.approx(b["n500_tri"][1] * (102 / 101 + 1.26 / 25200))
     assert b["tri_is_approx"].all()
+
+
+def test_label_counts_helper_keeps_labels_with_their_counts():
+    import polars as pl
+
+    from qr.panel.build import _counts
+    s = pl.Series("link_reason", ["new"] * 5 + ["rename_same_isin"] * 2 + ["isin_change_same_symbol"])
+    for _ in range(20):  # value_counts order is not stable; the helper must be
+        assert _counts(s) == {"new": 5, "rename_same_isin": 2, "isin_change_same_symbol": 1}

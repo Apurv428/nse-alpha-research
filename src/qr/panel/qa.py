@@ -15,6 +15,12 @@ CFG = yaml.safe_load((ROOT / "config" / "research.yaml").read_text())
 DEV_END = CFG["dev"]["end"]
 
 
+def _counts(s) -> dict:
+    """Label -> count. One value_counts call (its row order is not stable across calls)."""
+    vc = s.value_counts(sort=True)
+    return dict(zip(vc[s.name].to_list(), vc["count"].to_list()))
+
+
 def _prices(silver: Path) -> pl.LazyFrame:
     return pl.scan_parquet(silver / "prices" / "year=*.parquet")
 
@@ -56,7 +62,7 @@ def run_qa(silver: Path = Path("data/silver"), qa: Path = Path("runs/data_qa"), 
     ever_audit = audit.join(ever, on="sid")
     rep["jump_audit"] = {"n_flagged_all": audit.height, "n_flagged_ever_in_univ": ever_audit.height,
                          "unresolved_ever_in_univ": int(ever_audit["resolution"].is_null().sum()),
-                         "by_resolution_ever_in_univ": dict(zip(*[ever_audit["resolution"].value_counts()[c].to_list() for c in ("resolution", "count")])) if ever_audit.height else {}}
+                         "by_resolution_ever_in_univ": _counts(ever_audit["resolution"]) if ever_audit.height else {}}
     rep["gate_jumps_resolved"] = rep["jump_audit"]["unresolved_ever_in_univ"] == 0
     # 3. corporate-action ex-date spot check: most liquid split/bonus events inside the development window
     ca_dir = Path("data/raw/corpactions")

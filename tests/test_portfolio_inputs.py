@@ -53,7 +53,9 @@ def test_build_panel_and_attach_universe_alignment():
     bench = pl.DataFrame({"trade_date": cal["trade_date"], "n500_tri": np.linspace(100, 120, cal.height), "tri_is_approx": True})
     uni = pl.DataFrame({"month_start": [dt.date(2024, 1, 1)] * 2 + [dt.date(2024, 4, 1)], "sid": [1, 2, 1], "in_univ": [True, True, True],
                         "in_fno": [False, True, True]})
-    fut = pl.DataFrame({"sid": [1], "sess": [10], "ret_1d_fut": [0.01], "roll_flag": [True]}, schema_overrides={"sid": pl.Int64, "sess": pl.Int64})
+    # real silver.fut_cont schema: keyed by trade_date (no sess column)
+    fut = pl.DataFrame({"trade_date": [cal["trade_date"][10]], "sid": [1], "expiry_held": [cal["trade_date"][20]], "settle": [100.0],
+                        "ret_1d_fut": [0.01], "roll_flag": [True], "lot_size": [500]}, schema_overrides={"sid": pl.Int64})
     P = build_panel(px, cal, bench, uni, fut, ci)
     assert P.ret.shape == (200, 2) and np.isnan(P.ret[0]).all()
     assert P.fret[10, 0] == 0.01 and P.froll[10, 0] and not P.froll[11, 0]

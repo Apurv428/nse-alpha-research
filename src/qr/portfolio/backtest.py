@@ -59,6 +59,8 @@ def build_panel(prices, calendar, bench, universe, fut, ci=None) -> Panel:
     p = prices.select("sid", "sess", "ret_1d")
     ret = _dense(p, "ret_1d", sid_ix, sess0, T, N)
     adv, sig, hs = (_dense(ci, c, sid_ix, sess0, T, N) for c in ("adv", "sigma", "half_spread"))
+    if fut.height and "sess" not in fut.columns:                       # silver.fut_cont is keyed by trade_date
+        fut = fut.join(cal.select("trade_date", "sess"), on="trade_date")
     fret = _dense(fut, "ret_1d_fut", sid_ix, sess0, T, N)
     froll = _dense(fut.with_columns(pl.col("roll_flag").cast(pl.Float64)), "roll_flag", sid_ix, sess0, T, N, fill=0.0) > 0.5
     b = cal.join(bench.select("trade_date", "n500_tri"), on="trade_date", how="left").sort("sess")

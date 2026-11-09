@@ -25,6 +25,12 @@ ROOT = Path(__file__).resolve().parents[3]
 CFG = yaml.safe_load((ROOT / "config" / "research.yaml").read_text())
 
 
+def _counts(s) -> dict:
+    """Label -> count. One value_counts call (its row order is not stable across calls)."""
+    vc = s.value_counts(sort=True)
+    return dict(zip(vc[s.name].to_list(), vc["count"].to_list()))
+
+
 def _read(table: str, bronze: Path) -> pl.DataFrame:
     files = sorted((bronze / table).glob("year=*.parquet"))
     return pl.concat([pl.read_parquet(f) for f in files], how="vertical_relaxed") if files else pl.DataFrame()
@@ -87,8 +93,8 @@ def build_silver(raw: Path = Path("data/raw"), bronze: Path = Path("data/bronze"
     rows.write_csv(qa / "rows_per_day.csv")
     summary = {"stats": stats, "n_sessions": cal.height, "n_sids": master["sid"].n_unique(),
                "n_pairs": master.height, "ca_rows": 0 if ca is None else ca.height, "ca_unmapped": n_unmapped,
-               "ca_actions": {} if ca is None else dict(zip(*[ca["action"].value_counts()[c].to_list() for c in ("action", "count")])),
-               "jump_audit_by_resolution": dict(zip(*[audit["resolution"].value_counts()[c].to_list() for c in ("resolution", "count")])) if audit.height else {},
-               "link_reasons": dict(zip(*[master["link_reason"].value_counts()[c].to_list() for c in ("link_reason", "count")]))}
+               "ca_actions": {} if ca is None else _counts(ca["action"]),
+               "jump_audit_by_resolution": _counts(audit["resolution"]) if audit.height else {},
+               "link_reasons": _counts(master["link_reason"])}
     (qa / "silver_summary.json").write_text(json.dumps(summary, indent=1, default=str))
     return summary
