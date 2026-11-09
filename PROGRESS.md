@@ -12,6 +12,8 @@ _Read this first in a new session. Update at the end of every working session._
 - **Data:** `data/` is git-ignored and lives only in this cloud session. Rebuild: `qr ingest` -> `qr bronze` -> `qr panel` -> `qr qa`.
 
 ## Download (managed background job, resumable)
+- 2026-11-10: the job hit its 2 h background limit and was stopped at 2022-03-07 (6,518 of ~15,600 manifest lines; nothing lost, all cached).
+  Restart only on the user's go-ahead: it resumes from the manifest.
 - Script `scripts_download_all.sh` (2016-2026 first, then 2012-2015). Run it via a background task with timeout 7200000 and
   RELAUNCH when it exits (it skips everything already in `data/raw/_manifest.jsonl`). ~15.6k requests total, ~0.9 req/s => ~4.7 h.
 - Static reference files (sector lists, EQUITY_L, fo_mktlots) already fetched into `data/raw/static/`.
