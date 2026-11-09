@@ -1,0 +1,8 @@
+\section{Data}
+Raw files come from the NSE static archives (cash bhavcopy in the legacy and UDiFF formats, delivery files, F\&O bhavcopy, index files),
+downloaded at no more than one request per second with an honest User-Agent and an on-disk cache. A permanent security id links symbol changes through
+ISIN. Prices are adjusted to total returns for splits, bonuses and dividends from NSE corporate-action exports; rights issues are not adjusted, demergers are
+nulled, and any residual one-day move above 25\% is classified by a jump audit and nulled if unexplained. The universe is rebuilt each month from data
+dated before the month starts: EQ/BE series, at least 252 sessions of history, at least 55 trades in 63 sessions, close at least Rs 10, median traded value at least
+Rs 1 crore, top 750 by value. The Nifty 500 total-return index is approximate (price index plus dividend yield) unless an official file is supplied.
+Data-quality gates and the survivorship counts are in the ledger (\texttt{data.*}).

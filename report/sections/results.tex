@@ -1,0 +1,29 @@
+\section{Results}
+\subsection{Single signals}
+Strongest neutralized signal: \R{sig.best_neu.name}, mean rank IC \R{sig.best_neu.rank_ic_h5} ($t_{NW}=$ \R{sig.best_neu.t_nw_h5}, $h=5$). Signal tests passing Holm and $t\ge3$: \R{sig.n_pass_holm_t3}.
+\fig{f2_cum_ic}{0.8}
+\subsection{Combination}
+Headline combiner: \R{combo.headline} (rank IC \R{combo.headline.rank_ic}; equal weight \R{combo.ew.rank_ic}; paired difference $t=$ \R{combo.diff_vs_ew.t_nw}).
+\subsection{Development portfolios}
+\begin{table}[h]\centering\small
+\begin{tabular}{lrrrr}\toprule
+ & P1 gross & P1 net & P2 gross & P2 net\\ \midrule
+Information ratio / Sharpe & \R{p1.dev.ir_gross} & \R{p1.dev.ir_net} & \R{p2.dev.sharpe_gross} & \R{p2.dev.sharpe_net}\\
+CAGR (net) & & \R{p1.dev.cagr_net} & & \R{p2.dev.cagr_net}\\
+Max drawdown (net) & & \R{p1.dev.max_drawdown_net} & & \R{p2.dev.max_drawdown_net}\\
+One-way turnover per year & & \R{p1.dev.turnover_oneway_pa} & & \R{p2.dev.turnover_oneway_pa}\\
+Cost drag, bp per year & & \R{p1.dev.cost_drag_bp} & & \R{p2.dev.cost_drag_bp}\\ \bottomrule
+\end{tabular}\caption{Development window 2017-01-02 to 2024-10-31 (walk-forward). Risk-free: constant 6.5\% fallback.}\end{table}
+\subsection{The holdout read}
+\begin{table}[h]\centering\small
+\begin{tabular}{lrrrr}\toprule
+ & P1 gross & P1 net & P2 gross & P2 net\\ \midrule
+Information ratio / Sharpe & \R{p1.oos.ir_gross} & \R{p1.oos.ir_net} & \R{p2.oos.sharpe_gross} & \R{p2.oos.sharpe_net}\\
+95\% CI (net) & & [\R{p1.oos.ir_net.ci95_lo}, \R{p1.oos.ir_net.ci95_hi}] & & [\R{p2.oos.sharpe_net.ci95_lo}, \R{p2.oos.sharpe_net.ci95_hi}]\\
+PSR(0) & & \R{p1.oos.psr0} & & \R{p2.oos.psr0}\\
+Cost drag, bp per year & & \R{p1.oos.cost_drag_bp} & & \R{p2.oos.cost_drag_bp}\\
+STT share of drag, \% & & \R{p1.oos.stt_share_pct} & & \R{p2.oos.stt_share_pct}\\ \bottomrule
+\end{tabular}\caption{Locked out-of-sample window 2024-11-01 to 2026-10-30, read once.}\end{table}
+\fig{f5_cum_active}{0.8}
+\subsection{Capacity}
+P1 capacity: Rs \R{p1.dev.capacity_cr} crore; break-even cost multiple \R{p1.dev.break_even_cost_multiple}. \fig{f6_capacity}{0.7}

@@ -1,0 +1,21 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath,graphicx,hyperref,siunitx,natbib,caption}
+\input{numbers.tex}
+\newcommand{\fig}[2]{\IfFileExists{figures/#1.pdf}{\includegraphics[width=#2\linewidth]{figures/#1.pdf}}{\fbox{figure not generated (run \texttt{qr figures})}}}
+\title{NSE Cross-Sectional Alpha Research:\\ do classic price signals survive Indian costs and an honest holdout?}
+\author{Apurv Sonawane}
+\date{\today}
+\begin{document}
+\maketitle
+\input{sections/abstract}
+\input{sections/intro}
+\input{sections/data}
+\input{sections/method}
+\input{sections/results}
+\input{sections/robustness}
+\input{sections/limitations}
+\input{sections/conclusion}
+\bibliographystyle{plainnat}
+\bibliography{refs}
+\end{document}

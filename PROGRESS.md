@@ -5,7 +5,7 @@ _Read this first in a new session. Update at the end of every working session._
 ## Status (2026-11-10)
 - **Phase:** Day 1 code complete, Day 1 GATE NOT MET (download ~1.5k of 15.6k manifest lines, at 2017-06; no corporate-action export).
   Day 2-4 code is complete and unit-tested on synthetic data only: signals, eval, stats, CV, combiners, cost model, P1/P2 engine,
-  capacity, DSR/bootstrap honesty. CLI: `ingest bronze panel qa signals eval fit backtest`. Not yet written: `qr oos`, figures, RESULTS/report (Day 5).
+  capacity, DSR/bootstrap honesty. CLI: `ingest bronze panel qa signals eval fit backtest`. Also written: `freeze`, `rehearse`, `oos` (refuses unless preconditions hold), `ledger` (RESULTS.md, numbers.tex, README block, docs/RESUME_BULLETS.md), `figures`, LaTeX report skeleton (`report/`, compiles, all results via `\R{id}`), README, CI. All results currently print `not run`.
 - **Spec:** `docs/PRD.md`. Rules: `CLAUDE.md`. Decisions: `docs/DECISIONS.md` (D-001..D-022).
 - **Environment:** cloud workspace, Linux, `uv run` (Python 3.11, `.venv`, `uv.lock`). User machine: Windows x64, local shell
   unavailable. Sync = copy files + `git bundle` into `D:\QR\nse-alpha-research*` (last sync was after Setup only: refresh needed).
@@ -22,7 +22,7 @@ _Read this first in a new session. Update at the end of every working session._
 - Guards: `guard/oos_lock.py` (lock SEALED, `oos.lock` committed), `guard/trial_ledger.py` (+ `tests/test_oos_lock.py`).
 - Ingest: downloader, 4 bronze parsers (CM legacy/UDiFF, F&O legacy/UDiFF, MTO, index), corporate-action parser (+tests).
 - Silver: security master + links, split/bonus/dividend-adjusted total returns, jump audit, PIT universe, fut_cont, bench (approx TRI), sectors, QA gate report.
-- 112 tests pass; `tests/test_parsers_overlap.py::test_legacy_udiff_agree_on_overlap` fails until the 2024 overlap files are downloaded (by design: it fails rather than skips).
+- 117 tests pass; `tests/test_parsers_overlap.py::test_legacy_udiff_agree_on_overlap` fails until the 2024 overlap files are downloaded (by design: it fails rather than skips).
 
 ## Next
 1. Wait for download; relaunch the job if it stops. When complete: `qr bronze all && qr panel && qr qa`, read `runs/data_qa/gate_report.json`.

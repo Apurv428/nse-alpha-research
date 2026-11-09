@@ -1,0 +1,17 @@
+\section{Method}
+\subsection{Signals and evaluation}
+Eight signals with signs and windows fixed before any IC was computed (\texttt{PREREG.md}): MOM\_12\_1 \citep{jegadeesh1993}, REV\_5, LOWVOL\_63, IVOL\_63 \citep{ang2006},
+AMIHUD\_63 \citep{amihud2002}, ABVOL\_5\_63, DELIV\_ABN and HIGH52 \citep{george2004}. Each is winsorized at 1/99, standardized by date, neutralized to sector dummies, a shrunk Dimson beta and size, and
+re-standardized. We report rank IC at horizons 1, 5, 10 and 21 sessions with Newey--West $t$ statistics \citep{newey1987} and Holm adjustment across signals; a
+signal passes at $t\ge 3$ after Holm correction.
+\subsection{Combination}
+Equal weight, ridge and LightGBM are compared on eight expanding-window folds with a 27-session purge and embargo. The headline is the better of ridge and LightGBM only if it beats
+equal weight with Newey--West $t\ge 2$ on the IC difference, otherwise equal weight \citep{ldp2018,gu2020}.
+\subsection{Portfolios and costs}
+P1 is a long-only equal-weight book (enter in the top 10\%, hold to the top 20\%, weekly, signal at the close and fill at the next close, 10\% of ADV cap) against Nifty 500 TRI.
+P2 is long the top quintile in cash and short the bottom quintile in near-month stock futures. Costs are per side: dated STT, exchange charge, SEBI fee, stamp duty, brokerage (assumed 3 bp
+delivery, 1 bp futures), GST and the DP charge, plus an Abdi--Ranaldo half-spread \citep{abdi2017} and square-root impact $Y\sigma\sqrt{Q/\mathrm{ADV}}$ with $Y=1$.
+Capacity is the smaller of the AUM at which the net metric halves and the AUM at which more than 20\% of desired trading is blocked by the ADV cap.
+\subsection{Validation protocol}
+A pre-registration commit and tag precede the first IC; \texttt{oos.lock} makes every loader blind after 2024-10-31; every signal, combiner fold and base portfolio is logged to the trial
+ledger before results print; the deflated Sharpe ratio \citep{baileyldp2014} uses the true ledger count; confidence intervals use a stationary block bootstrap \citep{politis1994}.

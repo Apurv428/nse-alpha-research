@@ -1,0 +1,13 @@
+\section{Limitations}
+\begin{itemize}\itemsep0pt
+\item Sector labels are a 2026 snapshot, not point-in-time; names delisted earlier are \texttt{Unclassified}.
+\item No shares-outstanding data: size is proxied by traded value; share turnover is not tested.
+\item Corporate-action coverage is only as good as NSE's export; unresolved jumps are nulled (counts in the data-quality report).
+\item True delisting returns are unknown; a held name carries flat for up to 10 sessions and is then written off at a 0\% or 30\% haircut.
+\item Statutory rates were spot-checked from public sources; the 2024-10-01 futures STT date and the pre-2016 delivery history are not independently confirmed (no reported number depends on pre-2016 rates). Brokerage is assumed; futures margin is a flat 20\%; lot rounding is ignored.
+\item The impact model is a square-root law with $Y=1$, not fitted to Indian execution data. P2 uses cash-market ADV and volatility for the futures leg.
+\item The Nifty 500 total-return series is approximate unless an official file was supplied; the risk-free rate is a constant 6.5\% fallback.
+\item The trial count is a lower bound: choosing these eight signals from the literature was itself a selection the ledger cannot see. The paper's own deflated-Sharpe worked example was not reproduced (the PSR example was).
+\item The researcher lived through 2024--2026 markets; the lock prevents numeric peeking, not general knowledge.
+\item One market, about eight years of walk-forward plus two of holdout.
+\end{itemize}

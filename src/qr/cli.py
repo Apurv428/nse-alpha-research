@@ -155,5 +155,13 @@ def ledger() -> None:
     typer.echo(write_all())
 
 
+@app.command()
+def figures() -> None:
+    """Generate report figures from run artifacts (missing inputs are skipped)."""
+    from qr.report.figures import make_all
+
+    typer.echo(make_all())
+
+
 if __name__ == "__main__":
     app()

@@ -1,0 +1,12 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      QR_ALLOW_NO_DATA: "1"   # CI has no raw data: tests that need it are skipped, synthetic tests still run
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --python 3.11
+      - run: uv run pytest -q

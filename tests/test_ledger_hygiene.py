@@ -1,4 +1,4 @@
-"""RESULTS.md numbers come only from run files; the report may only show results via \\res{id}."""
+"""RESULTS.md numbers come only from run files; the report may only show results via \\R{id}."""
 import csv
 import json
 import re
@@ -31,5 +31,5 @@ def test_report_and_readme_use_only_registered_result_ids():
     for p in list((ROOT / "report").glob("**/*.tex")) + [ROOT / "README.md"]:
         if p.name == "numbers.tex" or not p.exists():
             continue
-        for m in re.findall(r"\\res\{([^}]+)\}", p.read_text()):
+        for m in re.findall(r"\\R\{([^}]+)\}", p.read_text()):
             assert m in ids, f"{p.name}: unknown result id {m}"
