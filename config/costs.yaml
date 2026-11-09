@@ -1,0 +1,29 @@
+# Time-varying Indian cost schedule (PRD section 8). Rates are fractions of traded value per side unless unit=INR.
+# Row: {component, segment, side, rate, valid_from}. The latest row with valid_from <= trade date applies.
+# Sources: Zerodha charges page and Business Today (2026-03-26) as cited in the PRD; STT history spot-checked 2026-11-09
+# (see docs/DECISIONS.md D-021). Pre-2016 rates do not touch any reported number (portfolios start 2017-01).
+brokerage_bp_sensitivities: [0, 3, 5]
+margin_pct_futures: 0.20
+dp_charge_inr: 15.34          # per scrip per sell day, delivery only
+gst_rate: 0.18                # on (brokerage + exchange charge + SEBI fee)
+rows:
+  # --- STT, equity delivery (both sides) ---
+  - {component: stt, segment: eq_delivery, side: both, rate: 0.00125, valid_from: "2012-01-01"}
+  - {component: stt, segment: eq_delivery, side: both, rate: 0.00100, valid_from: "2013-06-01"}
+  # --- STT, stock futures (sell side only) ---
+  - {component: stt, segment: stk_future, side: sell, rate: 0.00010,  valid_from: "2012-01-01"}
+  - {component: stt, segment: stk_future, side: sell, rate: 0.000125, valid_from: "2023-04-01"}
+  - {component: stt, segment: stk_future, side: sell, rate: 0.00020,  valid_from: "2024-10-01"}
+  - {component: stt, segment: stk_future, side: sell, rate: 0.00050,  valid_from: "2026-04-01"}
+  # --- exchange transaction charge (NSE), whole sample ---
+  - {component: exchange, segment: eq_delivery, side: both, rate: 0.0000307, valid_from: "2012-01-01"}
+  - {component: exchange, segment: stk_future, side: both, rate: 0.0000183, valid_from: "2012-01-01"}
+  # --- SEBI turnover fee: Rs 10 per crore ---
+  - {component: sebi, segment: eq_delivery, side: both, rate: 0.000001, valid_from: "2012-01-01"}
+  - {component: sebi, segment: stk_future, side: both, rate: 0.000001, valid_from: "2012-01-01"}
+  # --- stamp duty, buy side only (uniform since 2020-07-01; applied to earlier years too: slightly conservative) ---
+  - {component: stamp, segment: eq_delivery, side: buy, rate: 0.00015, valid_from: "2012-01-01"}
+  - {component: stamp, segment: stk_future, side: buy, rate: 0.00002, valid_from: "2012-01-01"}
+  # --- brokerage (assumed, institutional-style bp; sensitivities 0 and 5 bp) ---
+  - {component: brokerage, segment: eq_delivery, side: both, rate: 0.0003, valid_from: "2012-01-01"}
+  - {component: brokerage, segment: stk_future, side: both, rate: 0.0001, valid_from: "2012-01-01"}
