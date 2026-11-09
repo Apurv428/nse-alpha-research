@@ -8,6 +8,8 @@ PAT = re.compile(r"\b(read_parquet|scan_parquet|read_csv_batched)\b")
 ALLOWED = {  # data layer + the clipped loaders themselves (+ gold build, which only reads through io loaders)
     "src/qr/panel/io.py", "src/qr/panel/build.py", "src/qr/panel/qa.py", "src/qr/guard/trial_ledger.py",
     "src/qr/eval/run.py",  # reads only its own run outputs (daily_ic parquet is WRITTEN there)
+    "src/qr/stats/honesty.py",   # reads only ledger-logged weekly return series under runs/ (already dev-clipped outputs)
+    "src/qr/portfolio/run.py",   # reads only the combo run's test_scores.parquet under runs/ (dev-clipped output); data via io loaders
 }
 
 

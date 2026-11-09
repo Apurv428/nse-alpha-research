@@ -106,3 +106,21 @@ The paper's own DSR example is NOT reproduced; this is stated in the report's li
 PRD: rebuild silver and gold from raw files truncated at c. The synthetic end-to-end test (tests/test_gold_eval_synthetic.py)
 rebuilds universe, gold signals and neutral scores from price rows truncated at c and asserts exact equality for dates <= c.
 The full raw -> bronze -> silver truncation on real data is run once the real data exists (tests/test_pit_truncation.py).
+
+## D-021 STT history verification (2026-11-09/10)
+Confirmed from web sources: stock-futures STT 0.0125% from 2023-04-01 (Wikipedia) and 0.02% -> 0.05% effective 2026-04-01
+(Business Today). The 2024-10-01 step to 0.02% is consistent with those pages but not independently confirmed from the pages
+fetched; delivery 0.1% is confirmed as of 2016, the 2013-06-01 date is not. No reported number depends on pre-2016 rates
+(portfolios start 2017-01), so the unconfirmed dates cannot affect results. Brokerage is an assumed institutional-style
+3 bp (delivery) / 1 bp (futures), with 0 and 5 bp sensitivities.
+
+## D-022 Portfolio engine simplifications
+- Risk-free is the constant 6.5% fallback (no RBI T-bill series supplied); labelled as such in metrics.json.
+- One LightGBM configuration (fixed in `combiners.LGBM_PARAMS`), no tuning, so 24 combo trials, not a grid.
+- P2 shorts use the cash-market 63-day ADV/sigma/half-spread for the 10% participation cap and impact (futures traded value is
+  not carried into silver). Futures roll cost = statutory buy+sell on the short notional plus two half-spreads.
+- Short margin (20% of long notional) is held in cash earning rf; P2 capital = long notional + margin.
+- A held name with no price carries flat for up to 10 sessions, then is written off at (1 - haircut); base haircut 0%, sensitivity 30%.
+- Sensitivity and capacity runs are not logged as trials (same signal, same rule, different cost assumptions); only the base P1 and
+  P2 net books are. This is stated in the report.
+- Nifty 500 TRI is approximate (price index + dividend yield) unless a manual TRI file is supplied; flagged `tri_is_approx`.

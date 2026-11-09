@@ -86,5 +86,30 @@ def eval() -> None:  # noqa: A001
     typer.echo(json.dumps({k: v for k, v in res.items() if k != "trial_ids"}, indent=1, default=str))
 
 
+@app.command()
+def fit() -> None:
+    """Walk-forward combiners EW / ridge / LightGBM (24 trials logged) and the selection rule."""
+    import json
+
+    from qr.models.run import run_combine
+
+    res = run_combine()
+    typer.echo(json.dumps({k: v for k, v in res.items() if k not in ("combo.trial_ids", "selection")}, indent=1, default=str))
+    typer.echo("selection: " + json.dumps(res["selection"], default=str))
+
+
+@app.command()
+def backtest() -> None:
+    """P0/P1/P2 gross and net on the development window, costs, capacity, sensitivities (2 trials logged)."""
+    import json
+
+    from qr.portfolio.run import run_books
+
+    res = run_books()
+    if res.get("p1.dev.tripwire"):
+        typer.echo("TRIPWIRE: P1 net IR > 2.0 on the development window. STOP and audit for leakage (PRD s11).", err=True)
+    typer.echo(json.dumps(res, indent=1, default=str))
+
+
 if __name__ == "__main__":
     app()
