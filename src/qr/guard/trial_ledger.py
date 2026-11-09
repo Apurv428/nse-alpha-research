@@ -57,8 +57,8 @@ def sharpe_moments(ret: np.ndarray) -> dict:
             "skew": float(stats.skew(r)), "kurt": float(stats.kurtosis(r, fisher=False))}
 
 
-def append_line(rec: dict, ledger: Path = LEDGER) -> None:
-    ledger = Path(ledger)
+def append_line(rec: dict, ledger: Path | None = None) -> None:
+    ledger = Path(ledger if ledger is not None else LEDGER)
     ledger.parent.mkdir(parents=True, exist_ok=True)
     with ledger.open("a") as f:  # append-only
         f.write(json.dumps(rec, sort_keys=False, default=str) + "\n")
@@ -68,8 +68,9 @@ def append_line(rec: dict, ledger: Path = LEDGER) -> None:
 
 def log_trial(kind: str, params: dict, window: tuple[str, str], freq: str, returns: pl.DataFrame,
               rank_ic: float | None = None, t_nw: float | None = None,
-              ledger: Path = LEDGER, runs: Path = RUNS) -> dict:
+              ledger: Path | None = None, runs: Path | None = None) -> dict:
     assert kind in ("signal", "combo", "portfolio")
+    ledger, runs = Path(ledger if ledger is not None else LEDGER), Path(runs if runs is not None else RUNS)
     trial_id = f"{kind[:3]}-{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%S}-{uuid.uuid4().hex[:6]}"
     out_dir = Path(runs) / trial_id
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -81,20 +82,20 @@ def log_trial(kind: str, params: dict, window: tuple[str, str], freq: str, retur
            "git_sha": sha, "dirty": dirty, "config_hash": config_hash(params), "kind": kind,
            "params": params, "window": list(window), "freq": freq, **m,
            "rank_ic": rank_ic, "t_nw": t_nw,
-           "returns_path": str(ret_path.relative_to(ROOT)) if str(ret_path).startswith(str(ROOT)) else str(ret_path),
+           "returns_path": str(ret_path.relative_to(ROOT)) if ret_path.resolve().is_relative_to(ROOT) else str(ret_path),
            "superseded_by": None}
     append_line(rec, ledger)
     return rec
 
 
-def supersede(old_id: str, new_id: str, ledger: Path = LEDGER) -> None:
+def supersede(old_id: str, new_id: str, ledger: Path | None = None) -> None:
     append_line({"event": "supersede", "trial_id": old_id, "superseded_by": new_id,
                  "ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")}, ledger)
 
 
-def load_trials(ledger: Path = LEDGER) -> list[dict]:
+def load_trials(ledger: Path | None = None) -> list[dict]:
     """All trials (superseded ones included, with `superseded_by` resolved from supersede events)."""
-    ledger = Path(ledger)
+    ledger = Path(ledger if ledger is not None else LEDGER)
     if not ledger.exists():
         return []
     trials, sup = {}, {}
@@ -110,7 +111,7 @@ def load_trials(ledger: Path = LEDGER) -> list[dict]:
     return list(trials.values())
 
 
-def n_all(ledger: Path = LEDGER) -> int:
+def n_all(ledger: Path | None = None) -> int:
     """True trial count for the deflated Sharpe: every logged trial, superseded ones included."""
     return len(load_trials(ledger))
 

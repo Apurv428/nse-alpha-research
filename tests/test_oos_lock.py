@@ -95,8 +95,6 @@ def test_ledger_is_appended_before_result_returned_and_counts(tmp_path, monkeypa
 def test_decorator_logs_before_return(tmp_path, monkeypatch):
     monkeypatch.setattr(T, "LEDGER", tmp_path / "t.jsonl")
     monkeypatch.setattr(T, "RUNS", tmp_path / "runs")
-    # decorator uses module defaults captured at call time through log_trial defaults -> patch defaults
-    monkeypatch.setattr(T.log_trial, "__defaults__", (None, None, tmp_path / "t.jsonl", tmp_path / "runs"))
 
     @T.trial("signal")
     def run():

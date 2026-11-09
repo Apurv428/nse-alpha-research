@@ -63,5 +63,28 @@ def qa() -> None:
     typer.echo(json.dumps(run_qa(), indent=1, default=str))
 
 
+@app.command()
+def signals() -> None:
+    """Build gold (signals raw/z/z_neu, forward returns, context). Dev window only while the lock is sealed."""
+    import json
+
+    from qr.signals.gold import build_gold
+
+    typer.echo(json.dumps(build_gold(), indent=1))
+
+
+@app.command()
+def eval() -> None:  # noqa: A001
+    """Single-signal evaluation (logged as trials before printing)."""
+    import json
+
+    from qr.eval.run import run_eval
+
+    res = run_eval()
+    if res["sig.tripwire_hit"]:
+        typer.echo("TRIPWIRE: a signal has mean rank IC > 0.08 at h=5. STOP and run a leakage audit (PRD s11).", err=True)
+    typer.echo(json.dumps({k: v for k, v in res.items() if k != "trial_ids"}, indent=1, default=str))
+
+
 if __name__ == "__main__":
     app()

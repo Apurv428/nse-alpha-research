@@ -76,3 +76,33 @@ automated spot check, not a manual verification, and is described that way in RE
 ## D-015 — Series kept in bronze (Day 1)
 Bronze keeps only EQ, BE, BZ rows (PRD fixed decision "Price rows kept") and stock futures (FUTSTK / STF). Other series (SME,
 gold bonds, G-secs, N-series debt) are dropped at parse time.
+
+## D-016 — "Bit-identical" PIT test needs deterministic numerics (Day 1-2)
+Raw signals are bit-identical under truncation with default multithreading. The cross-sectional z and z_neu columns
+are not run-to-run bit-identical under multithreading even when the SAME data is rebuilt (Polars group-by and BLAS
+reductions differ at ~1e-15/1e-12). The test suite therefore runs single-threaded (`tests/conftest.py`), where the
+truncation tests assert exact equality of raw, z and z_neu. `neutralize()` sorts rows by sid so lstsq is reproducible.
+Production runs stay multithreaded; their only difference from a single-threaded rebuild is that float noise.
+
+## D-017 — Dimson beta (Day 2)
+PRD: "Dimson's sum of the lag-0 and lag-1 betas". Implemented as the sum of two univariate rolling slopes (stock log
+return on market log return at lag 0 and lag 1, 252 sessions, >= 150 observations), shrunk 0.6*b + 0.4. A full two-regressor
+Dimson regression is not used (simpler; closed-form rolling sums). Missing betas are set to 1.0 (the shrink prior); the
+fill rate is reported.
+
+## D-018 — Marginal decay indexing (Day 2)
+PRD: "rank IC of z_t against the 1-day return at session t+1+k, k = 0..20". Literally k=0 is the session t+1 return, which is
+earned BEFORE the fill at close t+1 (PRD s6 itself says R(h) starts at t+2). Used: the 1-day return of session t+2+k, so k=0
+is the first tradable day and equals the h=1 label; half-life is the first k where the IC falls below half the k=0 value.
+
+## D-019 — DSR worked-example check (Day 2)
+The paper's own DSR numeric example could not be retrieved offline. Validated instead: (1) PSR against the published
+hedge-fund example from Lopez de Prado's Sharpe-ratio presentation (24 monthly returns, SR 0.458, skew -2.448, kurt 10.164
+gives PSR(0) 0.913 non-normal and 0.982 normal) to 3 decimals; (2) DSR with one trial equals PSR(0); (3) the expected-max
+formula against a Monte Carlo of the maximum of N Sharpe ratios; (4) the DSR of the best of 50 noise strategies < 0.95.
+The paper's own DSR example is NOT reproduced; this is stated in the report's limitations.
+
+## D-020 — Truncation test scope (Day 2)
+PRD: rebuild silver and gold from raw files truncated at c. The synthetic end-to-end test (tests/test_gold_eval_synthetic.py)
+rebuilds universe, gold signals and neutral scores from price rows truncated at c and asserts exact equality for dates <= c.
+The full raw -> bronze -> silver truncation on real data is run once the real data exists (tests/test_pit_truncation.py).
