@@ -45,6 +45,17 @@ def url_for(dataset: str, d: dt.date) -> str:
     }[dataset]
 
 
+# One-time static reference files (sector snapshots, symbol master). Keyed by file name in the manifest.
+STATIC = {
+    "ind_nifty500list.csv": "/content/indices/ind_nifty500list.csv",
+    "ind_niftytotalmarket_list.csv": "/content/indices/ind_niftytotalmarket_list.csv",
+    "ind_niftymicrocap250_list.csv": "/content/indices/ind_niftymicrocap250_list.csv",
+    "ind_niftysmallcap250list.csv": "/content/indices/ind_niftysmallcap250list.csv",
+    "ind_niftymidcap150list.csv": "/content/indices/ind_niftymidcap150list.csv",
+    "EQUITY_L.csv": "/content/equities/EQUITY_L.csv",
+    "fo_mktlots.csv": "/content/fo/fo_mktlots.csv",
+}
+
 EXT = {"cm_legacy": "csv.zip", "cm_udiff": "csv.zip", "mto": "DAT", "fo_legacy": "csv.zip",
        "fo_udiff": "csv.zip", "indices": "csv"}
 
@@ -78,7 +89,10 @@ class Fetcher:
         self.done: dict[tuple[str, str], str] = {}
         if self.manifest.exists():
             for line in self.manifest.read_text().splitlines():
-                r = json.loads(line)
+                try:
+                    r = json.loads(line)
+                except json.JSONDecodeError:  # partial last line from a killed run: that file is simply re-fetched
+                    continue
                 self.done[(r["dataset"], r["date"])] = r["status"]
         self.client = httpx.Client(headers={"User-Agent": UA}, timeout=30, follow_redirects=False)
 
@@ -135,6 +149,32 @@ class Fetcher:
         return f"error:{last_status}"
 
 
+def fetch_statics(f: "Fetcher") -> dict:
+    """Fetch each static reference file once (snapshot date = today). Same limiter, same rules."""
+    out = {}
+    for name, path in STATIC.items():
+        key = ("static", name)
+        if key in f.done:
+            out[name] = "cached" if f.done[key] == "ok" else f.done[key]
+            continue
+        f._wait()
+        r = f.client.get(HOST + path)
+        if r.status_code in (403, 429):
+            raise Blocked(f"static {name}: HTTP {r.status_code}")
+        if r.status_code == 200 and r.content:
+            dest = f.root / "static" / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(r.content)
+            f._log(dataset="static", date=name, status="ok", url=HOST + path, bytes=len(r.content),
+                   sha256=hashlib.sha256(r.content).hexdigest(), snapshot=dt.date.today().isoformat())
+            out[name] = "ok"
+        else:
+            f._log(dataset="static", date=name, status="missing" if r.status_code == 404 else f"error:{r.status_code}",
+                   url=HOST + path, http=r.status_code)
+            out[name] = f"http{r.status_code}"
+    return out
+
+
 def weekdays(start: dt.date, end: dt.date):
     d = start
     while d <= end:
@@ -146,6 +186,7 @@ def weekdays(start: dt.date, end: dt.date):
 def run(start: dt.date, end: dt.date, root: Path = Path("data/raw"), only: list[str] | None = None,
         fo_legacy_end: dt.date = LEGACY_END) -> dict:
     f = Fetcher(root)
+    print("static:", fetch_statics(f), flush=True)
     counts: dict[str, int] = {}
     for d in weekdays(start, end):
         for ds in datasets_for(d, fo_legacy_end):
