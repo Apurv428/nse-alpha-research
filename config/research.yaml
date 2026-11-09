@@ -1,0 +1,26 @@
+# Fixed decisions from PRD section 1. Change only before Day 1; a later change is a new trial.
+sample:
+  start: "2012-01-02"
+  end: "2026-10-30"
+dev:
+  start: "2013-02-01"
+  end: "2024-10-31"
+oos:
+  start: "2024-11-01"
+  end: "2026-10-30"
+series_kept: [EQ, BE, BZ]
+universe:
+  tradable_series: [EQ, BE]
+  min_age_sessions: 252
+  min_traded_63: 55
+  window: 63
+  min_close_inr: 10.0
+  min_median_value_inr: 10000000   # Rs 1 crore
+  top_n: 750
+signal_timing: "signal at close t, fill at close t+1"
+horizons: [1, 5, 10, 21]
+download:
+  host: "https://nsearchives.nseindia.com"
+  user_agent: "nse-alpha-research/0.1 (personal research project)"
+  min_interval_s: 1.0
+  retries: 3
