@@ -1,29 +1,81 @@
-\section{Results}
+\section{Results}\label{sec:results}
+All values below are rendered from the run files by \texttt{qr ledger}; the ledger (\texttt{RESULTS.md}) names the file, key and git SHA behind
+each one. Development numbers are walk-forward (each test fold scored by a model fitted only on earlier data, with purging and an embargo).
+
 \subsection{Single signals}
-Strongest neutralized signal: \R{sig.best_neu.name}, mean rank IC \R{sig.best_neu.rank_ic_h5} ($t_{NW}=$ \R{sig.best_neu.t_nw_h5}, $h=5$). Signal tests passing Holm and $t\ge3$: \R{sig.n_pass_holm_t3}.
-\fig{f2_cum_ic}{0.8}
+Eight signals were tested raw and after sector, beta and size neutralization, at horizons of 1, 5, 10 and 21 sessions. The strongest
+neutralized signal by Newey--West $t$ at $h=5$ is \R{sig.best_neu.name}: mean rank IC \R{sig.best_neu.rank_ic_h5} ($t_{NW}=$ \R{sig.best_neu.t_nw_h5}).
+The largest mean rank IC of any signal at $h=5$ is \R{sig.max_rank_ic_h5}, well below the pre-registered 0.08 leakage tripwire. Of the 16
+pre-registered tests (8 signals, raw and neutral), \R{sig.n_pass_holm_t3} clear the joint hurdle of a Holm-adjusted $p<0.05$ and $|t|\ge3$ with
+the expected sign. Two liquidity-flavoured signals (Amihud illiquidity and abnormal volume) come out significant with the \emph{wrong} sign
+after neutralization, so they are reported as failures of the pre-registered hypothesis, not re-signed. Low volatility, idiosyncratic
+volatility and short-term reversal are the strongest effects; their cumulative ICs (Figure~\ref{fig:cumic}) rise steadily through the sample.
+
+\begin{figure}[h]\centering\fig{f2_cum_ic}{0.78}\caption{Cumulative daily rank IC of the neutralized signals ($h=5$), development window.}\label{fig:cumic}\end{figure}
+
 \subsection{Combination}
-Headline combiner: \R{combo.headline} (rank IC \R{combo.headline.rank_ic}; equal weight \R{combo.ew.rank_ic}; paired difference $t=$ \R{combo.diff_vs_ew.t_nw}).
+The pre-registered rule picks the better of ridge and LightGBM by mean fold rank IC and keeps it only if it beats the equal-weight z-score
+average with a Newey--West $t\ge2$ on the daily IC difference. The rule selected \R{combo.headline}: mean walk-forward rank IC
+\R{combo.headline.rank_ic} against \R{combo.ew.rank_ic} for equal weight (paired difference $t=$ \R{combo.diff_vs_ew.t_nw}). The headline score's
+IC does not decay with horizon: \R{combo.lgbm.rank_ic_h1} at one session and \R{combo.lgbm.rank_ic_h21} at 21 sessions (Figure~\ref{fig:decay}).
+This matters for what follows: the score's \emph{information} is slow, but the score itself is re-ranked every week.
+
+\begin{figure}[h]\centering\fig{f3_decay}{0.62}\hfill\fig{f4_corr}{0.36}\caption{Left: IC decay by horizon. Right: correlation of the signals' daily scores.}\label{fig:decay}\end{figure}
+
 \subsection{Development portfolios}
+The gross edge is large. The decile long--short spread (P0, equal weight, no costs) has a Sharpe ratio of \R{p0.dev.sharpe_gross}, and the
+long-only book (P1: enter the top 10\%, keep while in the top 20\%, at most 10\% of 63-day ADV per trade, Rs 1 crore) beats the Nifty 500 price index by
+\R{p1.dev.active_return_gross} a year gross (IR \R{p1.dev.ir_gross}). Costs remove all of it. P1 turns over \R{p1.dev.turnover_oneway_pa} times a year
+one-way, and the full Indian cost model drains \R{p1.dev.cost_drag_bp} bp a year: \R{p1.dev.spread_share_pct}\% of that is the estimated bid--ask
+spread, \R{p1.dev.stt_share_pct}\% STT and \R{p1.dev.impact_share_pct}\% market impact. Net of costs P1 compounds at \R{p1.dev.cagr_net} a year against
+\R{p1.dev.bench_cagr} for the index, an active return of \R{p1.dev.active_return_net} (net IR \R{p1.dev.ir_net}). The F\&O long--short book (P2) is
+worse: with \R{p2.dev.turnover_oneway_pa} one-way turnover a year its net Sharpe on capital is \R{p2.dev.sharpe_net}.
+
 \begin{table}[h]\centering\small
 \begin{tabular}{lrrrr}\toprule
  & P1 gross & P1 net & P2 gross & P2 net\\ \midrule
-Information ratio / Sharpe & \R{p1.dev.ir_gross} & \R{p1.dev.ir_net} & \R{p2.dev.sharpe_gross} & \R{p2.dev.sharpe_net}\\
-CAGR (net) & & \R{p1.dev.cagr_net} & & \R{p2.dev.cagr_net}\\
+Information ratio (P1) / Sharpe (P2) & \R{p1.dev.ir_gross} & \R{p1.dev.ir_net} & \R{p2.dev.sharpe_gross} & \R{p2.dev.sharpe_net}\\
+CAGR & \R{p1.dev.cagr_gross} & \R{p1.dev.cagr_net} & \R{p2.dev.cagr_gross} & \R{p2.dev.cagr_net}\\
 Max drawdown (net) & & \R{p1.dev.max_drawdown_net} & & \R{p2.dev.max_drawdown_net}\\
 One-way turnover per year & & \R{p1.dev.turnover_oneway_pa} & & \R{p2.dev.turnover_oneway_pa}\\
-Cost drag, bp per year & & \R{p1.dev.cost_drag_bp} & & \R{p2.dev.cost_drag_bp}\\ \bottomrule
-\end{tabular}\caption{Development window 2017-01-02 to 2024-10-31 (walk-forward). P1 benchmark: Nifty 500 price index. Risk-free: constant 6.5\% fallback.}\end{table}
+Average long holdings & & \R{p1.dev.avg_holdings_long_net} & & \R{p2.dev.avg_holdings_long_net}\\
+Cost drag, bp per year & & \R{p1.dev.cost_drag_bp} & & \R{p2.dev.cost_drag_bp}\\
+PSR(0), net & & \R{p1.dev.psr0} & & \R{p2.dev.psr0}\\ \bottomrule
+\end{tabular}\caption{Development window 2017-01-02 to 2024-10-31 (walk-forward). P1 benchmark: Nifty 500 price index (CAGR \R{p1.dev.bench_cagr}).
+Risk-free: constant 6.5\% fallback. P1 is evaluated against the benchmark (IR); P2 on capital (Sharpe).}\label{tab:dev}\end{table}
+
+\begin{figure}[h]\centering\fig{f5_cum_active_dev}{0.78}\caption{P1 cumulative net weekly active return against the Nifty 500 price index, development window.}\end{figure}
+
 \subsection{The holdout read}
+The model and both books were frozen, rehearsed on development data, and then run once on the locked window 2024-11-01 to 2026-10-30.
+The signal survived: the frozen score's mean rank IC is \R{oos.score.mean_rank_ic_h5} ($t_{NW}=$ \R{oos.score.t_nw_h5}), and the gross decile
+spread has a Sharpe of \R{p0.oos.sharpe_gross}. The portfolios did not. Gross, P1 beat a falling index (CAGR \R{p1.oos.bench_cagr}) by
+\R{p1.oos.active_return_gross} a year (IR \R{p1.oos.ir_gross}); net, it lost \R{p1.oos.active_return_net} a year against it (IR \R{p1.oos.ir_net},
+bootstrap 95\% interval [\R{p1.oos.ir_net.ci95_lo}, \R{p1.oos.ir_net.ci95_hi}], which excludes zero on the negative side). Costs were
+\R{p1.oos.cost_drag_bp} bp a year, \R{p1.oos.spread_share_pct}\% spread and \R{p1.oos.stt_share_pct}\% STT. The net beta to the index was
+\R{p1.oos.beta_net}. P2 lost money even before costs (gross Sharpe \R{p2.oos.sharpe_gross}) and its net Sharpe is \R{p2.oos.sharpe_net}.
+
 \begin{table}[h]\centering\small
 \begin{tabular}{lrrrr}\toprule
  & P1 gross & P1 net & P2 gross & P2 net\\ \midrule
-Information ratio / Sharpe & \R{p1.oos.ir_gross} & \R{p1.oos.ir_net} & \R{p2.oos.sharpe_gross} & \R{p2.oos.sharpe_net}\\
-95\% CI (net) & & [\R{p1.oos.ir_net.ci95_lo}, \R{p1.oos.ir_net.ci95_hi}] & & [\R{p2.oos.sharpe_net.ci95_lo}, \R{p2.oos.sharpe_net.ci95_hi}]\\
-PSR(0) & & \R{p1.oos.psr0} & & \R{p2.oos.psr0}\\
+Information ratio (P1) / Sharpe (P2) & \R{p1.oos.ir_gross} & \R{p1.oos.ir_net} & \R{p2.oos.sharpe_gross} & \R{p2.oos.sharpe_net}\\
+95\% bootstrap CI (net) & & [\R{p1.oos.ir_net.ci95_lo}, \R{p1.oos.ir_net.ci95_hi}] & & [\R{p2.oos.sharpe_net.ci95_lo}, \R{p2.oos.sharpe_net.ci95_hi}]\\
+CAGR & \R{p1.oos.cagr_gross} & \R{p1.oos.cagr_net} & \R{p2.oos.cagr_gross} & \R{p2.oos.cagr_net}\\
+Max drawdown (net) & & \R{p1.oos.max_drawdown_net} & & \R{p2.oos.max_drawdown_net}\\
+One-way turnover per year & & \R{p1.oos.turnover_oneway_pa} & & \R{p2.oos.turnover_oneway_pa}\\
+PSR(0), net & & \R{p1.oos.psr0} & & \R{p2.oos.psr0}\\
 Cost drag, bp per year & & \R{p1.oos.cost_drag_bp} & & \R{p2.oos.cost_drag_bp}\\
 STT share of drag, \% & & \R{p1.oos.stt_share_pct} & & \R{p2.oos.stt_share_pct}\\ \bottomrule
-\end{tabular}\caption{Locked out-of-sample window 2024-11-01 to 2026-10-30, read once.}\end{table}
-\fig{f5_cum_active}{0.8}
-\subsection{Capacity}
-P1 capacity: Rs \R{p1.dev.capacity_cr} crore; break-even cost multiple \R{p1.dev.break_even_cost_multiple}. \fig{f6_capacity}{0.7}
+\end{tabular}\caption{Locked out-of-sample window 2024-11-01 to 2026-10-30, read once (block bootstrap, $B=10{,}000$).}\label{tab:oos}\end{table}
+
+\begin{figure}[h]\centering\fig{f5_cum_active}{0.78}\caption{P1 cumulative net weekly active return in the holdout.}\end{figure}
+
+\subsection{Multiple testing and capacity}
+Across \R{honesty.n_all} logged trials (\R{honesty.n_eff} effectively independent at $\rho>0.7$), the deflated Sharpe ratio of the development P1 net
+returns is \R{p1.dev.dsr}: once the search is accounted for, there is no evidence of a positive net Sharpe. Capacity is defined as the smaller of
+the AUM that halves the net metric and the AUM at which the ADV cap blocks 20\% of desired trades; with a negative net metric at the smallest
+size it is undefined (P1 development: \R{p1.dev.capacity_cr}; holdout: \R{p1.oos.capacity_cr}). Costs would have to fall to
+\R{p1.dev.break_even_cost_multiple} times the modelled level for P1 to break even on the development window (P2: \R{p2.dev.break_even_cost_multiple}).
+The capacity curve (Figure~\ref{fig:cap}) is not monotone: beyond about Rs 100 crore the net IR \emph{improves}, because the 10\%-of-ADV cap blocks
+an increasing share of the desired trades and so forces lower turnover. That is a second sign that the book trades more than its signal needs.
+\begin{figure}[h]\centering\fig{f6_capacity}{0.6}\caption{P1 net IR against AUM (Rs crore, log scale), development window.}\label{fig:cap}\end{figure}

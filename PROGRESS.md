@@ -2,23 +2,23 @@
 
 _Read this first in a new session. Update at the end of every working session._
 
-## Status (2026-11-10 ~16:45 IST)
-- **Goal (user):** finish the whole project today. User decisions 12:40 IST: download now (D-024), no corporate-action export (D-023).
-- **Data:** full download done (15,628 manifest lines; 282 files of 2012-2015 not served by NSE). Bronze/silver/QA built (D-029, D-030).
-- **Real-data PIT test:** PASSED at 3 random cutoffs (runs/pit_realdata.log; sector labels held fixed, D-032).
-- **Official dev run:** signals -> eval -> fit -> backtest -> freeze -> rehearse done. No tripwire.
-  Backtest bug found and fixed (books rebalanced daily, D-033); backtest re-run, buggy trials superseded (still counted in N_all).
-- **NOW WAITING for the user's explicit "go"** to read the locked OOS window once (`qr oos --confirm`). Frozen model: config/frozen/frozen.json
-  (LGBM, 8 features, trained 2013-02-01..2024-09-24, best_iteration 78); portfolio config in oos.lock `headline`.
-- **After go:** tag `oos-candidate`, `qr oos --confirm` (once) -> `qr ledger`, `qr figures` -> results text in report -> `make report`
-  -> check numbers trace -> PROGRESS, commit -> bundle to D:\QR -> ASK before any GitHub remote/push.
-- **Spec:** `docs/PRD.md`. Rules: `CLAUDE.md`. Decisions: `docs/DECISIONS.md` (D-001..D-033).
+## Status (2026-11-10 ~20:00 IST): project complete
+- **Data:** full 2012-2026 download (15,628 manifest lines; 282 files of 2012-2015 not served by NSE). QA gates: see D-030.
+- **Real-data PIT test:** passed at 3 random cutoffs (D-032).
+- **Development run:** eval, fit (LGBM selected by the pre-registered rule), weekly backtest (daily-rebalance bug fixed first, D-033), freeze, rehearse.
+- **Holdout:** read ONCE on 2026-11-10 after the user's go-ahead (D-034). `oos.lock` state `read`. Never re-run.
+- **Deliverables:** `RESULTS.md` (109 rows, 0 "not run"), `report/main.pdf` (9 pages), `docs/RESUME_BULLETS.md`, README headline block.
+- **Git:** history rewritten to `Apurv428 <apurvsonawane28@gmail.com>`, no tool trailers (D-035, map in docs/SHA_MAP.md).
+  Remote: https://github.com/Apurv428/nse-alpha-research (push from this workspace is refused until the GitHub app is installed on it;
+  otherwise push from the bundle in D:\QR).
 
-## Development-window numbers (all from runs/, not yet in RESULTS.md; `qr ledger` will copy them with sources)
-- eval_20261110T105644, combo_20261110T110053, portfolios_20261110T110704 (weekly, corrected), rehearse output in runs/_rehearse_stdout.txt.
+## Headline (from RESULTS.md, do not retype elsewhere)
+Signals survive the holdout (rank IC row `oos.score.mean_rank_ic_h5`); the pre-registered weekly books do not survive Indian costs
+(`p1.oos.ir_net`, `p2.oos.sharpe_net`), mostly because of turnover (`p1.oos.turnover_oneway_pa`) and spreads/STT.
+
+## Next (only if continuing)
+- A NEW pre-registered study of slower books (monthly rebalance, wider buffer, turnover penalty) needs a NEW holdout; this one is spent.
+- Optional: supply dividends / Nifty 500 TRI / RBI T-bill series and rebuild (they change levels, not the conclusion's mechanism).
 
 ## Open issues
-- Universe < 750 names before ~2018 (Rs 1 crore floor binds, D-030); sessions 243/244 in 2014/2019 (election holidays, D-030).
-- Sector labels non-PIT (2026 snapshot): cutoff sensitivity in gate_report.json (D-032).
-- No dividends: stock returns are price returns, benchmark is the Nifty 500 price index (D-026).
-- No RBI T-bill series: constant 6.5% risk-free fallback.
+- Universe < 750 names before ~2018 (Rs 1 crore floor); sessions 243/244 in 2014/2019 (election holidays); sector labels non-PIT.

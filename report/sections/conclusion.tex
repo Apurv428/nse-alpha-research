@@ -1,2 +1,10 @@
 \section{Conclusion}
-The conclusions are drawn from the ledger values above, whatever they are: a holdout interval that includes zero or a deflated Sharpe below 0.95 is reported as a null result, with the cost attribution.
+The answer to the title question is no, for the books as pre-registered. Classic price and volume signals do predict the cross-section of NSE
+returns, and that prediction held up in a holdout read once (rank IC \R{oos.score.mean_rank_ic_h5}, $t=$ \R{oos.score.t_nw_h5}). But a weekly
+long-only top-decile book built on them loses to the Nifty 500 after Indian costs, in development (net IR \R{p1.dev.ir_net}) and in the holdout
+(net IR \R{p1.oos.ir_net}, interval [\R{p1.oos.ir_net.ci95_lo}, \R{p1.oos.ir_net.ci95_hi}]), and the F\&O long--short book loses more. The deflated
+Sharpe is \R{p1.dev.dsr}. This is a null result for net alpha, and it is reported as one.
+
+The failure is specific: the score's predictive power is slow (its IC does not decay over 21 sessions), but the weekly re-ranking trades it
+\R{p1.oos.turnover_oneway_pa} times a year, and spreads plus STT eat the edge. The natural next experiment is a slower book (monthly rebalance,
+wider hold buffer, or a turnover penalty in the optimizer), pre-registered against a new holdout, since this one has been spent.

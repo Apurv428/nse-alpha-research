@@ -1,4 +1,4 @@
-\section{Limitations}
+\section{Limitations}\label{sec:limits}
 \begin{itemize}\itemsep0pt
 \item Sector labels are a 2026 snapshot, not point-in-time; names delisted earlier are \texttt{Unclassified}.
 \item No shares-outstanding data: size is proxied by traded value; share turnover is not tested.
@@ -10,5 +10,10 @@
 \item The risk-free rate is a constant 6.5\% fallback (no RBI T-bill series supplied).
 \item The trial count is a lower bound: choosing these eight signals from the literature was itself a selection the ledger cannot see. The paper's own deflated-Sharpe worked example was not reproduced (the PSR example was).
 \item The researcher lived through 2024--2026 markets; the lock prevents numeric peeking, not general knowledge.
+\item The universe is smaller than designed early on: the pre-registered Rs 1 crore median-value floor leaves as few as \R{data.min_universe} names in a month, and \R{data.months_below_750} months have fewer than the 750-name cap, so early decile books are thin and tilted to liquid names. 2014 and 2019 have fewer sessions than the data gate expects because of election-day closures (D-030).
+\item Sector labels depend on the future through later renames: mapped with the security master as known at a 2014 cutoff, about a dozen universe names would be Unclassified (data-quality report; D-032). The truncation test therefore holds the mapped sector table fixed.
+\item The headline books trade weekly with no turnover control beyond a hold buffer. That was the pre-registered design; it is also, on this evidence, the main reason they fail.
+\item The holdout benchmark fell (Nifty 500 price index CAGR \R{p1.oos.bench_cagr}) and the book's beta was above one, so the holdout tests a single, weak market regime.
+\item A real backtest bug (daily instead of weekly rebalancing) was found and fixed before the holdout read; the commit history was later rewritten to the author's identity, which changed every SHA (map in \texttt{docs/SHA\_MAP.md}).
 \item One market, about eight years of walk-forward plus two of holdout.
 \end{itemize}

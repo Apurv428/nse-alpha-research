@@ -1,3 +1,25 @@
-\section{Robustness}
-Cost sensitivities (brokerage 0 and 5 bp, impact $Y\in\{0.5,2\}$, costs doubled) and a 30\% delisting haircut are written to \texttt{sensitivities\_p*.csv} in the portfolio run; they are not new
-alpha trials and are not in the ledger. Further checks listed in the PRD (no sector neutralization, monthly rebalance, by-year results) are reported only if run.
+\section{Robustness}\label{sec:robust}
+The cost conclusion does not hinge on one assumption. Table~\ref{tab:sens} re-runs P1 with each cost input moved (same scores, same rules;
+these are sensitivities, not new strategies, and are not counted as trials). Removing brokerage entirely or halving the impact coefficient
+leaves the net IR negative in both windows; doubling all costs makes it much worse. A 30\% haircut on names that stop trading changes little,
+because few held names were delisted.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{lrr}\toprule
+P1 net information ratio & Development & Holdout\\ \midrule
+Base case & \R{p1.dev.ir_net} & \R{p1.oos.ir_net}\\
+Brokerage 0 bp & \R{p1.dev.sens.brokerage_0bp} & \R{p1.oos.sens.brokerage_0bp}\\
+Impact coefficient $Y=0.5$ & \R{p1.dev.sens.Y_0.5} & \R{p1.oos.sens.Y_0.5}\\
+Impact coefficient $Y=2$ & \R{p1.dev.sens.Y_2.0} & \R{p1.oos.sens.Y_2.0}\\
+30\% delisting haircut & \R{p1.dev.sens.haircut_30pct} & \R{p1.oos.sens.haircut_30pct}\\
+All costs doubled & \R{p1.dev.sens.cost_x2} & \R{p1.oos.sens.cost_x2}\\ \bottomrule
+\end{tabular}\caption{Cost sensitivities for P1 (Rs 1 crore).}\label{tab:sens}\end{table}
+
+\paragraph{Leakage checks.} The real-data truncation test rebuilds the whole pipeline from raw files cut at three randomly drawn dates and
+requires every price, universe flag, signal and context value dated on or before the cut to be bit-identical to the full build; it passes.
+Neither tripwire fired (signal IC above 0.08, development net IR above 2). The first official backtest contained a real bug, a daily rather
+than weekly rebalance; it was found from its implausible turnover, fixed with a regression test and re-run, and its two trials remain in the
+ledger and in $N_{\mathrm{all}}$ (\texttt{DECISIONS.md} D-033).
+
+\paragraph{Not run.} The PRD's further robustness checks (no sector neutralization, a monthly rebalance, results by calendar year) were not run
+before the holdout was read. Running them now would be post-holdout exploration, so they are listed as future work rather than reported.

@@ -4,3 +4,8 @@ daily NSE panel (\R{data.n_sessions} sessions, \R{data.n_sids} securities, \R{da
 liquid universe) rebuilt from raw exchange files. Second, a locked protocol: a pre-registration tag before the first IC, an append-only trial
 ledger, and a holdout read exactly once. Third, a cost model that changes with the tax rules, including the April 2026 rise in stock-futures STT
 from 0.02\% to 0.05\%, which falls inside the holdout window.
+
+The short answer is that the signals survive and the portfolios do not. The combined score keeps a strongly significant rank IC in the
+holdout, but the pre-registered weekly books turn over too fast for Indian costs, and both lose to their benchmarks after costs in the
+development window and in the holdout. Section~\ref{sec:data} describes the panel, Section~\ref{sec:method} the protocol and models,
+Section~\ref{sec:results} the results, and Sections~\ref{sec:robust}--\ref{sec:limits} the checks and the limitations.
