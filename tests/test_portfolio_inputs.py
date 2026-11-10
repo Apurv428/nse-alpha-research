@@ -50,7 +50,8 @@ def test_impact_square_root_law():
 def test_build_panel_and_attach_universe_alignment():
     px, cal = make_prices()
     ci = cost_inputs(px, cal)
-    bench = pl.DataFrame({"trade_date": cal["trade_date"], "n500_tri": np.linspace(100, 120, cal.height), "tri_is_approx": True})
+    bench = pl.DataFrame({"trade_date": cal["trade_date"], "n500_tri": np.linspace(100, 120, cal.height), "n500_close": np.linspace(100, 110, cal.height),
+                          "tri_is_approx": True})
     uni = pl.DataFrame({"month_start": [dt.date(2024, 1, 1)] * 2 + [dt.date(2024, 4, 1)], "sid": [1, 2, 1], "in_univ": [True, True, True],
                         "in_fno": [False, True, True]})
     # real silver.fut_cont schema: keyed by trade_date (no sess column)
@@ -58,6 +59,8 @@ def test_build_panel_and_attach_universe_alignment():
                         "ret_1d_fut": [0.01], "roll_flag": [True], "lot_size": [500]}, schema_overrides={"sid": pl.Int64})
     P = build_panel(px, cal, bench, uni, fut, ci)
     assert P.ret.shape == (200, 2) and np.isnan(P.ret[0]).all()
+    assert P.bench_name == "n500_close"                                  # no dividends in prices -> price-index benchmark (D-026)
+    assert build_panel(px.with_columns(pl.lit(1.0).alias("div_inr")), cal, bench, uni, fut, ci).bench_name == "n500_tri"
     assert P.fret[10, 0] == 0.01 and P.froll[10, 0] and not P.froll[11, 0]
     attach_universe(P, uni, [dt.date(2024, 2, 15), dt.date(2024, 5, 1)])
     assert P.univ[dt.date(2024, 2, 15)][1].tolist() == [False, True]    # uses the January membership

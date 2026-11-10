@@ -35,7 +35,8 @@ class Panel:
     fret: np.ndarray                # futures daily return of the held near-month contract
     froll: np.ndarray               # bool
     bench_ret: np.ndarray           # [T]
-    univ: dict = field(default_factory=dict)   # rebalance row index -> (in_univ[N], in_fno[N])
+    univ: dict = field(default_factory=dict)
+    bench_name: str = "n500_tri"   # rebalance row index -> (in_univ[N], in_fno[N])
 
 
 def _dense(df: pl.DataFrame, col: str, sid_ix: dict, sess0: int, T: int, N: int, fill=np.nan, dtype=float) -> np.ndarray:
@@ -48,8 +49,12 @@ def _dense(df: pl.DataFrame, col: str, sid_ix: dict, sess0: int, T: int, N: int,
     return out
 
 
-def build_panel(prices, calendar, bench, universe, fut, ci=None) -> Panel:
-    """All inputs come from the clipped qr.panel.io loaders. `ci` = cost_inputs output (computed if None)."""
+def build_panel(prices, calendar, bench, universe, fut, ci=None, bench_col: str | None = None) -> Panel:
+    """All inputs come from the clipped qr.panel.io loaders. `ci` = cost_inputs output (computed if None).
+    Benchmark basis follows the stock-return basis (D-026): with no dividend data (price returns) P1 is measured against the
+    Nifty 500 PRICE index; with dividends, against the TRI."""
+    if bench_col is None:
+        bench_col = "n500_tri" if ("div_inr" in prices.columns and float(prices["div_inr"].fill_null(0).sum()) > 0) else "n500_close"
     ci = cost_inputs(prices, calendar) if ci is None else ci
     cal = calendar.sort("sess")
     sess0, T = int(cal["sess"].min()), cal.height
@@ -63,10 +68,10 @@ def build_panel(prices, calendar, bench, universe, fut, ci=None) -> Panel:
         fut = fut.join(cal.select("trade_date", "sess"), on="trade_date")
     fret = _dense(fut, "ret_1d_fut", sid_ix, sess0, T, N)
     froll = _dense(fut.with_columns(pl.col("roll_flag").cast(pl.Float64)), "roll_flag", sid_ix, sess0, T, N, fill=0.0) > 0.5
-    b = cal.join(bench.select("trade_date", "n500_tri"), on="trade_date", how="left").sort("sess")
-    tri = b["n500_tri"].to_numpy().astype(float)
+    b = cal.join(bench.select("trade_date", bench_col), on="trade_date", how="left").sort("sess")
+    tri = b[bench_col].to_numpy().astype(float)
     bret = np.concatenate([[np.nan], tri[1:] / tri[:-1] - 1.0])
-    return Panel(cal["trade_date"].to_list(), sess0, ever.to_numpy(), ret, adv, sig, hs, fret, froll, bret)
+    return Panel(cal["trade_date"].to_list(), sess0, ever.to_numpy(), ret, adv, sig, hs, fret, froll, bret, bench_name=bench_col)
 
 
 def attach_universe(panel: Panel, universe: pl.DataFrame, rebal_dates: list) -> None:

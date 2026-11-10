@@ -155,3 +155,9 @@ Unchanged: <= 1 request/s (start to start), honest User-Agent without personal d
 - Some F&O legacy files write integer columns as decimals ("2630.0000000"): integer columns are cast via Float64.
 - Weekend special sessions (Muhurat, budget Saturdays) are never downloaded (weekday requests only). The next session's return then spans
   two sessions; this is correct for returns and is not adjusted.
+
+## D-026 P1 benchmark basis follows the stock-return basis
+Without corporate-action exports there are no dividends in stock returns (D-023), so P1 is measured against the Nifty 500 PRICE index
+(`n500_close`), not the approximate TRI: comparing a price-return book with a total-return index would understate active return by roughly
+the index dividend yield (about 1-1.5% a year). If dividend data is added later, `build_panel` switches to the TRI automatically.
+P2's long cash leg also misses its dividends (conservative); the short futures leg is unaffected (dividends are in the futures basis).

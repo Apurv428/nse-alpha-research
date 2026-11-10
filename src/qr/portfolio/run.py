@@ -75,7 +75,8 @@ def evaluate_books(panel, scores: dict, fwd5: pl.DataFrame, cal: pl.DataFrame, b
     kw = dict(rf_annual=RF, first_date=first_date, last_date=last_date)
     sha, dirty = git_state()
     metrics, rows = {"git_sha": sha, "git_dirty": dirty, "model": model, "window": [str(first_date), str(last_date)], "rf_annual": RF,
-                     "rf_source": "constant fallback 6.5% (no RBI T-bill series supplied)", "tri_is_approx": bool(bench["tri_is_approx"][0])}, []
+                     "rf_source": "constant fallback 6.5% (no RBI T-bill series supplied)", "tri_is_approx": bool(bench["tri_is_approx"][0]),
+                     "benchmark": "Nifty 500 price index (stock returns exclude dividends, D-026)" if panel.bench_name == "n500_close" else "Nifty 500 TRI"}, []
     wk = T.weekly_dates(cal)
     sc_long = pl.concat([pl.DataFrame({"trade_date": [d] * int(np.isfinite(a).sum()), "sid": panel.sids[np.isfinite(a)], "signal": model, "score": a[np.isfinite(a)]})
                          for d, a in scores.items() if d >= first_date and (last_date is None or d <= last_date)])
