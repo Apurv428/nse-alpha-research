@@ -136,3 +136,11 @@ def test_future_rows_cannot_change_gold_values_before_them(tmp_path):
     b = pl.read_parquet(cut_dir / "gold" / "signals" / "signals.parquet").sort("trade_date", "sid", "signal")
     assert a.height == b.height and a.height > 1000
     assert a.select("trade_date", "sid", "signal", "raw", "z", "z_neu").equals(b.select("trade_date", "sid", "signal", "raw", "z", "z_neu"))
+
+
+def test_figures_from_eval_outputs(pipeline, tmp_path):
+    from qr.report.figures import make_all
+    tmp, _, _ = pipeline
+    made = make_all(tmp / "runs", tmp_path / "fig")
+    assert {"f2_cum_ic", "f3_decay", "f4_corr"} <= set(made)
+    assert all((tmp_path / "fig" / f"{m}.pdf").stat().st_size > 1000 for m in made)

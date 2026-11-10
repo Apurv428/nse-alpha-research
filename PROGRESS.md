@@ -2,29 +2,15 @@
 
 _Read this first in a new session. Update at the end of every working session._
 
-## Status (2026-11-10)
-- **Phase:** Day 1 code complete, Day 1 GATE NOT MET (download ~1.5k of 15.6k manifest lines, at 2017-06; no corporate-action export).
-  Day 2-4 code is complete and unit-tested on synthetic data only: signals, eval, stats, CV, combiners, cost model, P1/P2 engine,
-  capacity, DSR/bootstrap honesty. CLI: `ingest bronze panel qa signals eval fit backtest`. Also written: `freeze`, `rehearse`, `oos` (refuses unless preconditions hold), `ledger` (RESULTS.md, numbers.tex, README block, docs/RESUME_BULLETS.md), `figures`, LaTeX report skeleton (`report/`, compiles, all results via `\R{id}`), README, CI. All results currently print `not run`.
-- **Spec:** `docs/PRD.md`. Rules: `CLAUDE.md`. Decisions: `docs/DECISIONS.md` (D-001..D-022).
-- **Environment:** cloud workspace, Linux, `uv run` (Python 3.11, `.venv`, `uv.lock`). User machine: Windows x64, local shell
-  unavailable. Sync = copy files + `git bundle` into `D:\QR\nse-alpha-research*` (last sync was after Setup only: refresh needed).
-- **Data:** `data/` is git-ignored and lives only in this cloud session. Rebuild: `qr ingest` -> `qr bronze` -> `qr panel` -> `qr qa`.
-
-## Download (managed background job, resumable)
-- 2026-11-10: the job hit its 2 h background limit and was stopped at 2022-03-07 (6,518 of ~15,600 manifest lines; nothing lost, all cached).
-  Restart only on the user's go-ahead: it resumes from the manifest.
-- Script `scripts_download_all.sh` (2016-2026 first, then 2012-2015). Run it via a background task with timeout 7200000 and
-  RELAUNCH when it exits (it skips everything already in `data/raw/_manifest.jsonl`). ~15.6k requests total, ~0.9 req/s => ~4.7 h.
-- Static reference files (sector lists, EQUITY_L, fo_mktlots) already fetched into `data/raw/static/`.
-
-## Done
-- Setup (repo, env, CLAUDE.md, PROGRESS.md, DECISIONS.md).
-- Day 2-4 modules (synthetic-tested): signals/gold, eval (IC, decay, deciles), stats (NW, bootstrap, DSR, honesty), models (purged CV, EW/ridge/LGBM), portfolio (costs, impact, construct, backtest, metrics, capacity, run).
-- Guards: `guard/oos_lock.py` (lock SEALED, `oos.lock` committed), `guard/trial_ledger.py` (+ `tests/test_oos_lock.py`).
-- Ingest: downloader, 4 bronze parsers (CM legacy/UDiFF, F&O legacy/UDiFF, MTO, index), corporate-action parser (+tests).
-- Silver: security master + links, split/bonus/dividend-adjusted total returns, jump audit, PIT universe, fut_cont, bench (approx TRI), sectors, QA gate report.
-- 117 tests pass; `tests/test_parsers_overlap.py::test_legacy_udiff_agree_on_overlap` fails until the 2024 overlap files are downloaded (by design: it fails rather than skips).
+## Status (2026-11-10 13:10 IST)
+- **Goal (user):** finish the whole project today. User decisions 12:40 IST: download now (D-024), no corporate-action export (D-023).
+- **Download:** running (2 requests in flight, starts >= 1 s apart, D-027); full 2012-2026 sample expected ~15:20 IST. Job limit is 2 h: relaunch
+  `./scripts_download_all.sh` if it stops (resumable).
+- **Then:** `./scripts_run_dev.sh data` -> read runs/data_qa/gate_report.json -> `QR_RUN_REALDATA=1 uv run pytest tests/test_pit_truncation.py`
+  -> `./scripts_run_dev.sh research` (ONCE) -> show the user the frozen model/config -> on explicit go-ahead: tag `oos-candidate`, `qr oos --confirm`
+  -> `qr ledger`, `qr figures`, write results/interpretation, `make report`, check numbers trace, sync, ask before any GitHub push.
+- **Incident D-028:** an accidental look at partial development results (shuffle no-op); 33 trials added to the ledger; disclosed in the report.
+- **Spec:** `docs/PRD.md`. Rules: `CLAUDE.md`. Decisions: `docs/DECISIONS.md` (D-001..D-028).
 
 ## Real-data dry run (2026-11-10, partial download 2016-01 .. 2019-06, scratch dir, deleted afterwards)
 - bronze -> silver -> qa -> gold -> cost inputs -> backtest panel all run on real files. NO IC, backtest or performance number was computed.
