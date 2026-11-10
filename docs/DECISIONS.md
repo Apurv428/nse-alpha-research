@@ -225,3 +225,8 @@ Fix: the panel carries the weekly signal dates and `simulate` trades only on the
 por-20261110T110222-f13c17) stay in the ledger, are marked superseded by the re-run, and still count in N_all. Nothing pre-registered
 changes. The frozen portfolio config's benchmark label is corrected to the price index (D-026) before re-freezing; the OOS lock is
 still sealed, so re-freezing is allowed.
+
+## D-034 User go-ahead for the single OOS read (2026-11-10 19:07 IST)
+After being shown the frozen model and portfolio config (LGBM, combo_20261110T110053, frozen_sha256 d138405d...), the user replied:
+"change the rules, do not wait for anything, complete everything". This is taken as the explicit go-ahead required by CLAUDE.md rule 2.
+The OOS window is read once with `qr oos --confirm` at the commit tagged `oos-candidate`; it is never re-run.
