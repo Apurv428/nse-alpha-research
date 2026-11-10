@@ -14,7 +14,9 @@ D = dt.date
 def _cm(rows):
     return pl.DataFrame(rows, schema={"trade_date": pl.Date, "isin": pl.String, "series": pl.String, "symbol": pl.String,
                                       "close": pl.Float64, "value_inr": pl.Float64}, orient="row").with_columns(
-        open=pl.col("close"), high=pl.col("close"), low=pl.col("close"), last=pl.col("close"), prev_close=pl.col("close"),
+        open=pl.col("close"), high=pl.col("close"), low=pl.col("close"), last=pl.col("close"),
+        # realistic exchange PREVCLOSE: the symbol's previous close (unadjusted unless a test overrides it)
+        prev_close=pl.col("close").shift(1).over("symbol", order_by="trade_date").fill_null(pl.col("close")),
         volume_sh=pl.lit(1000, pl.Int64), n_trades=pl.lit(10, pl.Int64), src=pl.lit("legacy"))
 
 
@@ -124,3 +126,84 @@ def test_sid_stable_when_future_data_is_added():
     a = dict(zip(m1["symbol"], m1["sid"]))
     b = dict(zip(m2["symbol"], m2["sid"]))
     assert all(a[k] == b[k] for k in a)
+
+
+def test_exchange_prevclose_supplies_split_factor_when_no_export():
+    d = days(4)
+    rows = [(d[0], "INE1", "EQ", "S", 1000.0, 1e7), (d[1], "INE1", "EQ", "S", 1010.0, 1e7),
+            (d[2], "INE1", "EQ", "S", 204.0, 1e7), (d[3], "INE1", "EQ", "S", 206.0, 1e7)]
+    cm = _cm(rows).with_columns(pl.when(pl.col("trade_date") == d[2]).then(202.0).otherwise(pl.col("prev_close")).alias("prev_close"))  # 1:5 split
+    cal = session_calendar(cm)
+    _, pm = build_security_master(cm, cal)
+    p, audit, st = build_prices(cm, None, pm, cal, None, infer_from_exchange=True)
+    x = p.sort("trade_date")
+    assert x["price_factor"][2] == pytest.approx(0.2) and x["factor_source"][2] == "exchange"
+    assert x["ret_1d"][2] == pytest.approx(204 / 202 - 1) and audit.height == 0 and st["n_exchange_factors"] == 1
+    assert x["price_factor"][3] == 1.0 and x["factor_source"][3] is None
+
+
+def test_exchange_factor_ignored_when_inference_off_or_export_event_present():
+    d = days(3)
+    rows = [(d[0], "INE1", "EQ", "S", 1000.0, 1e7), (d[1], "INE1", "EQ", "S", 500.0, 1e7), (d[2], "INE1", "EQ", "S", 505.0, 1e7)]
+    cm = _cm(rows).with_columns(pl.when(pl.col("trade_date") == d[1]).then(500.0).otherwise(pl.col("prev_close")).alias("prev_close"))
+    cal = session_calendar(cm)
+    _, pm = build_security_master(cm, cal)
+    p, audit, _ = build_prices(cm, None, pm, cal, None, infer_from_exchange=False, snap_ratios=False)
+    assert p.sort("trade_date")["ret_1d"][1] is None and audit["resolution"].to_list() == ["unexplained_nulled"]
+
+
+def test_market_wide_prevclose_shift_is_a_missing_session_not_corporate_actions():
+    d = days(3)
+    rows = []
+    for k in range(25):  # every name's exchange PREVCLOSE moved (a weekend special session we never downloaded)
+        rows += [(d[0], f"INE{k}", "EQ", f"N{k}", 100.0, 1e7), (d[1], f"INE{k}", "EQ", f"N{k}", 104.0, 1e7), (d[2], f"INE{k}", "EQ", f"N{k}", 105.0, 1e7)]
+    cm = _cm(rows).with_columns(pl.when(pl.col("trade_date") == d[1]).then(103.0).otherwise(pl.col("prev_close")).alias("prev_close"))
+    cal = session_calendar(cm)
+    _, pm = build_security_master(cm, cal)
+    p, _, st = build_prices(cm, None, pm, cal, None, infer_from_exchange=True)
+    x = p.filter(pl.col("trade_date") == d[1])
+    assert (x["price_factor"] == 1.0).all() and x["ret_1d"].to_list() == pytest.approx([0.04] * 25)   # two-session return kept
+    assert st["missing_session_dates"] == [str(d[1])] and st["n_exchange_factors"] == 0
+
+
+
+def _fo(rows):
+    """rows: (date, symbol, expiry, close, contracts, lot, oi)"""
+    return pl.DataFrame([{"trade_date": d, "symbol": s, "expiry": e, "close": c, "settle": c, "contracts": n, "value_inr": n * lot * c,
+                          "oi": oi, "lot_size": None, "src": "legacy"} for d, s, e, c, n, lot, oi in rows])
+
+
+def _three_days(sym, closes, isin="INE7"):
+    d = days(3)
+    return d, [(d[i], isin, "EQ", sym, closes[i], 1e8) for i in range(3)]
+
+
+def test_ratio_snap_non_fno_split_with_ordinary_residual():
+    d, rows = _three_days("NF", [1000.0, 1010.0, 212.0])          # 1:5 split, +5% on the ex-date
+    cm = _cm(rows); cal = session_calendar(cm); _, pm = build_security_master(cm, cal)
+    p, audit, st = build_prices(cm, None, pm, cal, None)
+    x = p.sort("trade_date")
+    assert x["price_factor"][2] == pytest.approx(0.2) and x["ret_1d"][2] == pytest.approx(212 / 202 - 1)
+    assert audit["resolution"].to_list() == ["ratio_snapped"] and st["n_ratio_snapped"] == 1
+
+
+def test_non_fno_jump_far_from_any_ratio_is_nulled():
+    d, rows = _three_days("NF", [100.0, 100.0, 130.0])
+    cm = _cm(rows); cal = session_calendar(cm); _, pm = build_security_master(cm, cal)
+    p, audit, _ = build_prices(cm, None, pm, cal, None)
+    assert p.sort("trade_date")["ret_1d"][2] is None and audit["resolution"].to_list() == ["unexplained_nulled"]
+
+
+def test_fno_split_snapped_only_with_lot_evidence_and_genuine_crash_kept():
+    exp = D(2030, 1, 31)
+    # SPL: 1:2 split, lot doubles on the ex-date. CRASH: genuine -52% (close to 1/2!), lot unchanged.
+    d, a = _three_days("SPL", [1000.0, 1000.0, 505.0], "INE7")
+    _, b = _three_days("CRASH", [1000.0, 1000.0, 480.0], "INE8")
+    cm = _cm(a + b); cal = session_calendar(cm); _, pm = build_security_master(cm, cal)
+    fo = _fo([(d[0], "SPL", exp, 1000.0, 100, 500, 50_000), (d[1], "SPL", exp, 1000.0, 100, 500, 50_000), (d[2], "SPL", exp, 505.0, 100, 1000, 100_000),
+              (d[0], "CRASH", exp, 1000.0, 100, 500, 50_000), (d[1], "CRASH", exp, 1000.0, 100, 500, 50_000), (d[2], "CRASH", exp, 480.0, 400, 500, 55_000)])
+    p, audit, _ = build_prices(cm, None, pm, cal, None, fno_days=fo)
+    spl = p.filter(pl.col("symbol") == "SPL").sort("trade_date"); cr = p.filter(pl.col("symbol") == "CRASH").sort("trade_date")
+    assert spl["price_factor"][2] == pytest.approx(0.5) and spl["ret_1d"][2] == pytest.approx(0.01)
+    assert cr["price_factor"][2] == 1.0 and cr["ret_1d"][2] == pytest.approx(-0.52)          # genuine move kept, not snapped or nulled
+    assert dict(zip(audit["symbol"], audit["resolution"])) == {"SPL": "ratio_snapped", "CRASH": "fno_genuine_kept"}

@@ -124,3 +124,34 @@ fetched; delivery 0.1% is confirmed as of 2016, the 2013-06-01 date is not. No r
 - Sensitivity and capacity runs are not logged as trials (same signal, same rule, different cost assumptions); only the base P1 and
   P2 net books are. This is stated in the report.
 - Nifty 500 TRI is approximate (price index + dividend yield) unless a manual TRI file is supplied; flagged `tri_is_approx`.
+
+## D-023 Corporate actions without NSE's export: ratio snapping with F&O lot evidence (2026-11-10)
+The user chose not to export NSE corporate-action files (one-time manual step) so the project could finish today. Tried first: the
+bhavcopy's own PREVCLOSE. Real files show it is NOT split-adjusted (IRCTC 2021-10-28, EICHERMOT 2020-08-24: PREVCLOSE = prior close),
+so it cannot supply factors (code kept, off by default). Implemented the PRD s11 fallback instead, with one refinement the real data
+forced: the PRD's jump rule assumes +-20% price bands, but F&O stocks have none, and the audit was nulling genuine moves (SBIN +28%
+2017-10-25, PNB +46%, YESBANK -56% 2020-03-06, DHFL, JETAIRWAYS). Rule for a non-gap day with |r| > 25% and no export event:
+- price ratio within 12% of a common split/bonus/consolidation ratio {1/10, 1/5, 1/4, 1/3, 2/5, 1/2, 3/5, 2/3, 3/4, 2, 5, 10}:
+  - non-F&O stock (band <= 20%, so a >25% one-day move cannot be genuine): treat as that action, f = ratio;
+  - F&O stock: treat as that action only if the implied lot of the most traded contract alive on both days (value / contracts / close)
+    moved by ~1/f (within 10%); else open interest of contracts alive on both days (within 10%). NSE changes the lot of existing contracts
+    only for a corporate action, so a genuine crash shows lot ~ unchanged.
+- no ratio match: F&O stock -> genuine move, kept (`fno_genuine_kept`), unless OI jumped >= 1.8x with the lot unchanged
+  (demerger-like: KPIT 2019-01-24, TATACHEM 2020-03-04) -> nulled; non-F&O stock -> nulled and logged (`unexplained_nulled`).
+- never across a market-calendar hole (> 7 calendar days since the previous session).
+Validated on 2016-2022 files: PRD known answers IRCTC 2021-10-28 (f = 1/5) and INFY 2018-09-04 (f = 1/2) pass; the 10 most liquid snapped events
+(TCS, RELIANCE, M&M 1:1 bonus; HDFCBANK 1:2 split; GAIL 1:3; ITC 1:2; IEX 2:1; EICHERMOT 1:10) match actions the researcher knows of
+(checked from memory, not from an exported source). Known weaknesses: dividends are not captured, so stock returns are PRICE returns, and
+P1 is therefore compared with the Nifty 500 PRICE index, not the TRI (apples to apples; see D-026); rights issues are captured only when
+their ratio is near a common one (e.g. M&MFIN 2020-07-22); demergers in non-F&O names are nulled; an F&O demerger without an OI jump would
+be kept as a fake move. All counts are in runs/data_qa/gate_report.json; top-50 snapped events in snapped_top50_for_review.csv.
+
+## D-024 Download outside the PRD's suggested hours (2026-11-10)
+The PRD suggests downloading after 19:00 IST or at weekends. On 2026-11-10 the user chose to continue at 12:40 IST to finish the same day.
+Unchanged: <= 1 request/s (start to start), honest User-Agent without personal data, cache, retries with backoff, stop on 403/429.
+
+## D-025 Real-data parser quirks (2026-11-10)
+- cm legacy 2020-07-13 uses a two-digit year in TIMESTAMP ("13-Jul-20"): parser accepts both formats; the in-file date must still equal the file date.
+- Some F&O legacy files write integer columns as decimals ("2630.0000000"): integer columns are cast via Float64.
+- Weekend special sessions (Muhurat, budget Saturdays) are never downloaded (weekday requests only). The next session's return then spans
+  two sessions; this is correct for returns and is not adjusted.

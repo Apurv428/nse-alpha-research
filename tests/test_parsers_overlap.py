@@ -50,3 +50,19 @@ def test_parsers_reject_wrong_filename_date(tmp_path):
     with pytest.raises(ValueError):
         parse_cm.parse_legacy(z, dt.date(2012, 1, 3))
     assert parse_cm.parse_legacy(z, dt.date(2012, 1, 2)).height == 1
+
+
+def test_legacy_two_digit_year_timestamp(tmp_path):
+    import datetime as dt
+    import io
+    import zipfile
+
+    from qr.ingest.parse_cm import parse_legacy
+    csv = ("SYMBOL,SERIES,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,TOTTRDQTY,TOTTRDVAL,TIMESTAMP,TOTALTRADES,ISIN\n"
+           "AAA,EQ,1,1,1,1,1,1,10,10,13-Jul-20,1,INE000A01010\n")
+    p = tmp_path / "2020-07-13.csv.zip"
+    with zipfile.ZipFile(p, "w") as z:
+        z.writestr("cm13JUL2020bhav.csv", csv)
+    assert parse_legacy(p, dt.date(2020, 7, 13)).height == 1
+    with pytest.raises(ValueError):
+        parse_legacy(p, dt.date(2020, 7, 14))

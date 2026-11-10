@@ -27,7 +27,10 @@ def parse_legacy(path: Path, trade_date: dt.date) -> pl.DataFrame:
     data, sha = _read_zip_csv(path)
     df = pl.read_csv(io.BytesIO(data), infer_schema_length=0, truncate_ragged_lines=True)
     df = df.rename({c: c.strip() for c in df.columns}).filter(pl.col("SERIES").str.strip_chars().is_in(KEEP_SERIES))
-    file_dates = df["TIMESTAMP"].str.to_date("%d-%b-%Y").unique().to_list()
+    ts = df["TIMESTAMP"].str.strip_chars()
+    # most files use "13-JUL-2020"; a few use a two-digit year ("13-Jul-20", e.g. 2020-07-13)
+    fmt = "%d-%b-%Y" if (ts.str.len_chars() == 11).all() else "%d-%b-%y"
+    file_dates = ts.str.to_date(fmt).unique().to_list()
     if file_dates and file_dates != [trade_date]:
         raise ValueError(f"{path}: in-file dates {file_dates} != filename date {trade_date}")
     out = df.select(
@@ -38,8 +41,8 @@ def parse_legacy(path: Path, trade_date: dt.date) -> pl.DataFrame:
         pl.col("OPEN").cast(pl.Float64).alias("open"), pl.col("HIGH").cast(pl.Float64).alias("high"),
         pl.col("LOW").cast(pl.Float64).alias("low"), pl.col("CLOSE").cast(pl.Float64).alias("close"),
         pl.col("LAST").cast(pl.Float64).alias("last"), pl.col("PREVCLOSE").cast(pl.Float64).alias("prev_close"),
-        pl.col("TOTTRDQTY").cast(pl.Int64).alias("volume_sh"), pl.col("TOTTRDVAL").cast(pl.Float64).alias("value_inr"),
-        pl.col("TOTALTRADES").cast(pl.Int64).alias("n_trades"),
+        pl.col("TOTTRDQTY").cast(pl.Float64).cast(pl.Int64).alias("volume_sh"), pl.col("TOTTRDVAL").cast(pl.Float64).alias("value_inr"),
+        pl.col("TOTALTRADES").cast(pl.Float64).cast(pl.Int64).alias("n_trades"),
         pl.lit("legacy").alias("src"), pl.lit(sha).alias("file_sha"))
     return out
 
@@ -59,6 +62,6 @@ def parse_udiff(path: Path, trade_date: dt.date) -> pl.DataFrame:
         pl.col("OpnPric").cast(pl.Float64).alias("open"), pl.col("HghPric").cast(pl.Float64).alias("high"),
         pl.col("LwPric").cast(pl.Float64).alias("low"), pl.col("ClsPric").cast(pl.Float64).alias("close"),
         pl.col("LastPric").cast(pl.Float64).alias("last"), pl.col("PrvsClsgPric").cast(pl.Float64).alias("prev_close"),
-        pl.col("TtlTradgVol").cast(pl.Int64).alias("volume_sh"), pl.col("TtlTrfVal").cast(pl.Float64).alias("value_inr"),
-        pl.col("TtlNbOfTxsExctd").cast(pl.Int64).alias("n_trades"),
+        pl.col("TtlTradgVol").cast(pl.Float64).cast(pl.Int64).alias("volume_sh"), pl.col("TtlTrfVal").cast(pl.Float64).alias("value_inr"),
+        pl.col("TtlNbOfTxsExctd").cast(pl.Float64).cast(pl.Int64).alias("n_trades"),
         pl.lit("udiff").alias("src"), pl.lit(sha).alias("file_sha"))

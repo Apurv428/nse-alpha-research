@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import yaml
 
@@ -84,8 +85,23 @@ def run_qa(silver: Path = Path("data/silver"), qa: Path = Path("runs/data_qa"), 
         rep["gate_actions_lt_20pct"] = bool(top.height >= n_events and rep["corp_action_spot_check"]["n_ge_20pct"] == 0
                                             and rep["corp_action_spot_check"]["n_null_ret"] == 0)
     else:
-        rep["corp_action_spot_check"] = "not run: no corporate-action export in data/raw/corpactions"
-        rep["gate_actions_lt_20pct"] = False
+        rep["corp_action_spot_check"] = "not run: no corporate-action export in data/raw/corpactions (D-023: factors inferred from exchange PREVCLOSE)"
+        rep["gate_actions_lt_20pct"] = None
+    # 3b. Ratio-snapped actions (D-023, PRD s11 fallback): PRD-named known answers + the 50 most liquid for review
+    snaps = p.filter(pl.col("factor_source") == "ratio_snap").select("symbol", "trade_date", "price_factor", "ret_1d", "value_inr").collect()
+    known = {("IRCTC", "2021-10-28"): 0.2, ("INFY", "2018-09-04"): 0.5}
+    kn = {}
+    for (sym, d), f in known.items():
+        r = snaps.filter((pl.col("symbol") == sym) & (pl.col("trade_date") == pl.lit(d).str.to_date()))
+        kn[f"{sym} {d}"] = None if r.height == 0 else {"factor": r["price_factor"][0], "ret_1d": r["ret_1d"][0],
+                                                         "ok": bool(abs(r["price_factor"][0] - f) < 1e-9 and abs(r["ret_1d"][0]) < 0.20)}
+    top = snaps.sort("value_inr", descending=True, nulls_last=True).head(50)
+    top.write_csv(qa / "snapped_top50_for_review.csv")
+    rep["ratio_snap_check"] = {"n_snapped": snaps.height, "known_answers": kn,
+                               "top50_max_abs_ret": float(top["ret_1d"].abs().max()) if top.height else None,
+                               "top50_file": "runs/data_qa/snapped_top50_for_review.csv"}
+    present = [v for v in kn.values() if v is not None]
+    rep["gate_known_actions_ok"] = bool(present and all(v["ok"] for v in present)) if present else None
     # 4. Unclassified share per year (sector labels are a 2026 snapshot)
     sec = pl.read_parquet(silver / "sectors" / "sectors.parquet")
     um = inu.join(sec, on="sid", how="left").with_columns(pl.col("month_start").dt.year().alias("year"))

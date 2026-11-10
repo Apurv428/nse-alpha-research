@@ -65,7 +65,7 @@ def build_silver(raw: Path = Path("data/raw"), bronze: Path = Path("data/bronze"
     cal = session_calendar(cm)
     master, pair_map = build_security_master(cm, cal, ca)
     events, n_unmapped = (map_events_to_sid(ca, master) if ca is not None else (None, 0))
-    prices, audit, stats = build_prices(cm, mto, pair_map, cal, events)
+    prices, audit, stats = build_prices(cm, mto, pair_map, cal, events, fno_days=fo if fo.height else None)
     uni = build_universe(prices, cal, fo if fo.height else None, master, CFG)
     fut = build_fut_cont(fo, cal, master, prices) if fo.height else pl.DataFrame()
     bench = build_bench(idx, raw / "manual" / "n500_tri.csv")
