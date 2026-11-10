@@ -1,5 +1,7 @@
 # NSE Cross-Sectional Alpha Research
 
+**Full report (PDF): [report/main.pdf](report/main.pdf)**
+
 **Question.** Do classic daily price/volume signals predict cross-sectional returns on the NSE after realistic Indian costs, and does the
 answer survive an honest, locked holdout?
 
