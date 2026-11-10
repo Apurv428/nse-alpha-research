@@ -105,12 +105,18 @@ def high52(d: pl.LazyFrame) -> pl.LazyFrame:
     return f.select("trade_date", "sid", pl.when(nvalid >= 200).then(pl.col("_I") / mx).otherwise(None).alias("raw"))
 
 
-def compute_all(dense: pl.LazyFrame, names: list[str] | None = None) -> pl.DataFrame:
-    """Long frame (trade_date, sid, signal, raw) for rows where the sid actually traded on t."""
+def compute_all(dense: pl.LazyFrame, names: list[str] | None = None, keep: pl.DataFrame | None = None) -> pl.DataFrame:
+    """Long frame (trade_date, sid, signal, raw) for rows where the sid actually traded on t.
+
+    `keep` (trade_date, sid), if given, restricts the OUTPUT rows (for example to the PIT universe); each signal is still computed over
+    the full dense per-sid history, so values are identical to filtering afterwards. Signals are collected one at a time to bound
+    memory on the full 2012-2026 panel (D-031)."""
     traded = dense.select("trade_date", "sid", "traded_row")
     outs = []
     for n in (names or list(REGISTRY)):
         r = REGISTRY[n]["fn"](dense).join(traded, on=["trade_date", "sid"]).filter(pl.col("traded_row") & pl.col("raw").is_not_null()
                                                                                     & pl.col("raw").is_finite())
-        outs.append(r.select("trade_date", "sid", pl.lit(n).alias("signal"), "raw"))
-    return pl.concat(outs).collect()
+        if keep is not None:
+            r = r.join(keep.lazy(), on=["trade_date", "sid"], how="semi")
+        outs.append(r.select("trade_date", "sid", pl.lit(n).alias("signal"), "raw").collect())
+    return pl.concat(outs)

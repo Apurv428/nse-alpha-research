@@ -198,3 +198,10 @@ value >= Rs 1 crore; Jan 2017: 1,321 vs 568. The absolute Rs 1 crore floor (PRD 
 turnover was lower. The rule stays as pre-registered. Changing it now would be an undisclosed post-Day-1 change. Consequence, reported
 in the limitations: the early cross-section is smaller (decile portfolios have about 30-60 names before 2018) and is tilted to larger,
 more liquid names.
+
+## D-031 Gold build and real-data PIT test restructured to fit 7 GB RAM; values unchanged (2026-11-10)
+On the full panel, `qr signals` was killed for running out of memory. Signals, betas and forward returns are now filtered to the PIT
+universe (dev dates) BEFORE they are collected, one signal or horizon at a time; each is still computed over the full per-sid history,
+so values equal "compute everything, then filter". Neutralization runs one signal at a time (it already worked per signal-date).
+Outputs are written as soon as they are ready. The real-data PIT test now runs each truncated build in a subprocess and compares one
+calendar year at a time. Peak memory: about 5 GB for gold.

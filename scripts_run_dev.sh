@@ -6,12 +6,12 @@ set -euo pipefail
 cd "$(dirname "$0")"
 QR=.venv/bin/qr
 # 7 GB RAM box: single-threaded Polars + 2 malloc arenas keep the 2012-2026 silver build at ~5.6 GB peak (D-029)
-export MALLOC_ARENA_MAX=2
+export MALLOC_ARENA_MAX=2 POLARS_MAX_THREADS=1
 log() { echo "[$(date -u +%H:%M:%S)] $*"; }
 case "${1:-}" in
   data)
     log bronze;  $QR bronze all
-    log panel;   POLARS_MAX_THREADS=1 $QR panel
+    log panel;   $QR panel
     log qa;      $QR qa ;;
   research)
     log signals;  $QR signals
