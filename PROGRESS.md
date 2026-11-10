@@ -9,8 +9,8 @@ _Read this first in a new session. Update at the end of every working session._
 - **Holdout:** read ONCE on 2026-11-10 after the user's go-ahead (D-034). `oos.lock` state `read`. Never re-run.
 - **Deliverables:** `RESULTS.md` (109 rows, 0 "not run"), `report/main.pdf` (9 pages), `docs/RESUME_BULLETS.md`, README headline block.
 - **Git:** history rewritten to `Apurv428 <apurvsonawane28@gmail.com>`, no tool trailers (D-035, map in docs/SHA_MAP.md).
-  Remote: https://github.com/Apurv428/nse-alpha-research (push from this workspace is refused until the GitHub app is installed on it;
-  otherwise push from the bundle in D:\QR).
+  Remote: https://github.com/Apurv428/nse-alpha-research (main pushed 2026-11-10). Tags prereg-v1 (12c576b) and oos-candidate
+  (f576e51) could not be pushed from the cloud workspace; push them from a local clone (`git push origin --tags`).
 
 ## Headline (from RESULTS.md, do not retype elsewhere)
 Signals survive the holdout (rank IC row `oos.score.mean_rank_ic_h5`); the pre-registered weekly books do not survive Indian costs
