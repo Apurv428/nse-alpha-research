@@ -15,7 +15,7 @@
     "keep": 0.2,
     "cap_adv": 0.1,
     "rebalance": "weekly, signal t close, fill t+1 close",
-    "benchmark": "Nifty 500 TRI"
+    "benchmark": "Nifty 500 price index while stock returns exclude dividends (D-026); TRI if dividends are supplied"
    },
    "P2": {
     "long": "top quintile cash",
