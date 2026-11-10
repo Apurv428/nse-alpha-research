@@ -21,7 +21,7 @@ from qr.models.run import FEATURES, restandardize, wide_features
 from qr.panel import io
 
 FROZEN_DIR = Path(__file__).resolve().parents[3] / "config" / "frozen"
-PORTFOLIO_CONFIG = {"P1": {"enter": 0.10, "keep": 0.20, "cap_adv": 0.10, "rebalance": "weekly, signal t close, fill t+1 close", "benchmark": "Nifty 500 TRI"},
+PORTFOLIO_CONFIG = {"P1": {"enter": 0.10, "keep": 0.20, "cap_adv": 0.10, "rebalance": "weekly, signal t close, fill t+1 close", "benchmark": "Nifty 500 price index while stock returns exclude dividends (D-026); TRI if dividends are supplied"},
                     "P2": {"long": "top quintile cash", "short": "bottom quintile near-month futures", "roll_sessions": 3, "margin": 0.20},
                     "costs": "config/costs.yaml", "Y": 1.0, "aum_cr": 1.0, "rf_annual": 0.065}
 

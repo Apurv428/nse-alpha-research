@@ -214,3 +214,14 @@ this is the declared limitation, not a return leak. The test now holds the refer
 only) and checks everything else bit for bit. Result: PASSED at cutoffs drawn with seed 20261110 (runs/pit_realdata.log).
 The size of the label dependence is reported in gate_report.json `sector_label_cutoff_sensitivity`: with the master known at a
 2014/2017/2019/2021/2023 cutoff, 13/8/5/6/2 universe names would fall to Unclassified. This goes into the limitations.
+
+## D-033 Bug found in the first official backtest: the books rebalanced DAILY; fixed and re-run (2026-11-10)
+The model's walk-forward test scores exist for every session, and `simulate` rebalanced on every scored date. The PRD fixes a WEEKLY
+rebalance (signal at the week's last close, fill at the next close). Symptoms in run portfolios_20261110T110152: P1 one-way turnover
+64x a year, P2 126x, and net results destroyed by costs (P2 net NAV went through zero, which the engine does not handle, so its net
+statistics there are meaningless). P0 (decile spread) already used weekly dates and is unaffected; eval and fit are unaffected.
+Fix: the panel carries the weekly signal dates and `simulate` trades only on them; daily-looking rebalance dates now raise
+(regression test `test_daily_scores_rebalance_only_weekly`). The two buggy portfolio trials (por-20261110T110154-28029b,
+por-20261110T110222-f13c17) stay in the ledger, are marked superseded by the re-run, and still count in N_all. Nothing pre-registered
+changes. The frozen portfolio config's benchmark label is corrected to the price index (D-026) before re-freezing; the OOS lock is
+still sealed, so re-freezing is allowed.

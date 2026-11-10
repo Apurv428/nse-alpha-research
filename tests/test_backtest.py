@@ -115,3 +115,22 @@ def test_metrics_and_capacity_on_synthetic_panel():
     o = simulate(P, sc, "P1")
     m = summarize(o["daily"], np.array([P.bench_ret[0]] * 0 + [0.0005] * (o["daily"].height - 1)))
     assert {"cagr", "vol", "sharpe", "max_drawdown", "worst_month", "weekly_hit_rate", "ir", "beta", "tracking_error"} <= set(m)
+
+
+def test_daily_scores_rebalance_only_weekly():
+    """Regression (D-033): the model's test scores exist for EVERY date; the books must still trade only on the last session of each
+    ISO week. With panel.weekly set, daily scores give the same NAV path as weekly scores; without it, daily scores raise."""
+    P = mk(T=60, N=20, seed=3)
+    rng = np.random.default_rng(1)
+    daily = {d: rng.normal(size=20) for d in P.dates[:-1]}
+    wk = {}
+    for d in P.dates:
+        wk[(d.isocalendar()[0], d.isocalendar()[1])] = d
+    P.weekly = set(wk.values())
+    a = simulate(P, daily, "P1", cost_mult=1.0, rf_annual=0.0)
+    b = simulate(P, {d: v for d, v in daily.items() if d in P.weekly}, "P1", cost_mult=1.0, rf_annual=0.0)
+    assert np.array_equal(a["daily"]["nav"].to_numpy(), b["daily"]["nav"].to_numpy())
+    assert a["turnover_oneway_pa"] == b["turnover_oneway_pa"]
+    P.weekly = set()
+    with pytest.raises(ValueError, match="WEEKLY"):
+        simulate(P, daily, "P1", cost_mult=1.0, rf_annual=0.0)

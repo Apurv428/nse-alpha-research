@@ -1,0 +1,19 @@
+{
+ "model": "LGBM",
+ "features": [
+  "MOM_12_1",
+  "REV_5",
+  "LOWVOL_63",
+  "IVOL_63",
+  "AMIHUD_63",
+  "ABVOL_5_63",
+  "DELIV_ABN",
+  "HIGH52"
+ ],
+ "target": "gaussian cross-sectional rank of 5d fwd return",
+ "train_start": "2013-02-01",
+ "train_end": "2024-09-24",
+ "n_train": 347820,
+ "best_iteration": 78,
+ "lgbm_sha256": "de1b9285e2f08dd81714cb97000014802f395d77b24c9356295ca832b44ab84e"
+}

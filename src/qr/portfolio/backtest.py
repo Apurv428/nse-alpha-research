@@ -37,6 +37,7 @@ class Panel:
     bench_ret: np.ndarray           # [T]
     univ: dict = field(default_factory=dict)
     bench_name: str = "n500_tri"   # rebalance row index -> (in_univ[N], in_fno[N])
+    weekly: set = field(default_factory=set)  # signal dates of the weekly rebalance (last session of each ISO week)
 
 
 def _dense(df: pl.DataFrame, col: str, sid_ix: dict, sess0: int, T: int, N: int, fill=np.nan, dtype=float) -> np.ndarray:
@@ -71,7 +72,9 @@ def build_panel(prices, calendar, bench, universe, fut, ci=None, bench_col: str 
     b = cal.join(bench.select("trade_date", bench_col), on="trade_date", how="left").sort("sess")
     tri = b[bench_col].to_numpy().astype(float)
     bret = np.concatenate([[np.nan], tri[1:] / tri[:-1] - 1.0])
-    return Panel(cal["trade_date"].to_list(), sess0, ever.to_numpy(), ret, adv, sig, hs, fret, froll, bret, bench_name=bench_col)
+    wk = cal.with_columns(pl.col("trade_date").dt.iso_year().alias("iy"), pl.col("trade_date").dt.week().alias("iw")).group_by("iy", "iw").agg(
+        pl.col("trade_date").max())["trade_date"].to_list()
+    return Panel(cal["trade_date"].to_list(), sess0, ever.to_numpy(), ret, adv, sig, hs, fret, froll, bret, bench_name=bench_col, weekly=set(wk))
 
 
 def attach_universe(panel: Panel, universe: pl.DataFrame, rebal_dates: list) -> None:
@@ -109,8 +112,12 @@ def simulate(panel: Panel, scores: dict, book: str, aum_cr: float = 1.0, cost_mu
     seg_idx = {d: i for i, d in enumerate(panel.dates)}
     T, N = panel.ret.shape
     sig_dates = sorted(d for d in scores if d in seg_idx and d in panel.univ)
+    if panel.weekly:  # PRD: weekly rebalance on the week's last close, whatever dates the score table holds (D-033)
+        sig_dates = [d for d in sig_dates if d in panel.weekly]
     if first_date:
         sig_dates = [d for d in sig_dates if d >= first_date]
+    if len(sig_dates) > 4 and np.median(np.diff([seg_idx[d] for d in sig_dates])) < 3:
+        raise ValueError("rebalance dates are (almost) daily: the books are pre-registered as WEEKLY (D-033)")
     fill_at = {seg_idx[d] + 1: d for d in sig_dates if seg_idx[d] + 1 < T}
     s_start = min(fill_at)
     s_end = (seg_idx[last_date] if last_date else T - 1)

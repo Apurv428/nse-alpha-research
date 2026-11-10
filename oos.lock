@@ -7,6 +7,29 @@
  "prereg_commit": "5fa0385ce340d5561d32d1bcb9c4a937abbed2b1",
  "opened_at": null,
  "opened_commit": null,
- "headline": null,
+ "headline": {
+  "model": "LGBM",
+  "portfolio": {
+   "P1": {
+    "enter": 0.1,
+    "keep": 0.2,
+    "cap_adv": 0.1,
+    "rebalance": "weekly, signal t close, fill t+1 close",
+    "benchmark": "Nifty 500 TRI"
+   },
+   "P2": {
+    "long": "top quintile cash",
+    "short": "bottom quintile near-month futures",
+    "roll_sessions": 3,
+    "margin": 0.2
+   },
+   "costs": "config/costs.yaml",
+   "Y": 1.0,
+   "aum_cr": 1.0,
+   "rf_annual": 0.065,
+   "frozen_sha256": "d138405dcee9957a08a2afdd745d725baa345ee3d279d7905342ddff602a49ae",
+   "combo_run": "combo_20261110T110053"
+  }
+ },
  "results_sha256": null
 }
