@@ -23,9 +23,9 @@ Weak or negative results are reported as plainly as strong ones. Full detail: `r
 <!-- RESULTS:END -->
 
 ## What is in here
-- A survivorship-free daily NSE panel rebuilt from raw exchange archives (cash, delivery, F&O, index), ISIN-linked, with split/bonus/dividend total-return adjustment and a point-in-time monthly liquidity universe.
+- A survivorship-free daily NSE panel rebuilt from raw exchange archives (cash, delivery, F&O, index), ISIN-linked, with splits and bonuses inferred from the data (ratio matching confirmed by F&O lot sizes; no dividends) and a point-in-time monthly liquidity universe.
 - 8 pre-registered signals, evaluated with rank IC, Newey-West inference and Holm correction; EW / ridge / LightGBM combiners under purged, embargoed walk-forward CV.
-- Long-only (P1, vs Nifty 500 TRI) and F&O long-short (P2) books, gross and net of a time-varying Indian cost model (STT history incl. the April 2026 futures hike), with turnover and capacity.
+- Long-only (P1, vs the Nifty 500 price index: stock returns exclude dividends) and F&O long-short (P2) books, gross and net of a time-varying Indian cost model (STT history incl. the April 2026 futures hike), with turnover and capacity.
 - Research hygiene: `PREREG.md` + tag `prereg-v1` before the first IC; `oos.lock` (holdout 2024-11-01 to 2026-10-30, read once); an append-only trial ledger; deflated Sharpe with the true trial count.
 
 ## Setup
@@ -37,7 +37,7 @@ uv run pytest -q             # CI sets QR_ALLOW_NO_DATA=1 so data-dependent test
 ## Rebuild the data and results (data/ and runs/ are not in git)
 ```bash
 uv run qr ingest --start 2012-01-02 --end 2026-10-30   # polite: <=1 request/s, cached, resumable (hours)
-# optional manual inputs: corporate-action CSV exports -> data/raw/corpactions/; Nifty 500 TRI -> data/raw/manual/n500_tri.csv
+# optional manual inputs (not used in the reported run): corporate-action CSV exports -> data/raw/corpactions/
 uv run qr bronze all && uv run qr panel && uv run qr qa   # read runs/data_qa/gate_report.json
 uv run qr signals && uv run qr eval                        # logs 16 signal trials
 uv run qr fit && uv run qr backtest                        # combiners, then P0/P1/P2 on the development window

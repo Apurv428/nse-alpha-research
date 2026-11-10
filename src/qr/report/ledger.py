@@ -63,7 +63,7 @@ for book, main in (("p1", "ir"), ("p2", "sharpe")):
     for tag, win, d in (("dev", DEV, "portfolios_*"), ("oos", "2024-11-01 -> 2026-10-30", "oos")):
         base = ("json", d, "metrics.json")
         REG += [
-            (f"{book}.{tag}.{main}_net", f"{book.upper()} net {'IR vs Nifty 500 TRI' if book == 'p1' else 'Sharpe on capital'}", win, *base, (f"{book}.{tag}.{main}_net",)),
+            (f"{book}.{tag}.{main}_net", f"{book.upper()} net {'IR vs Nifty 500 (price index)' if book == 'p1' else 'Sharpe on capital'}", win, *base, (f"{book}.{tag}.{main}_net",)),
             (f"{book}.{tag}.{main}_gross", f"{book.upper()} gross {'IR' if book == 'p1' else 'Sharpe'}", win, *base, (f"{book}.{tag}.{main}_gross",)),
             (f"{book}.{tag}.cagr_net", f"{book.upper()} net CAGR", win, *base, (f"{book}.{tag}.cagr_net",)),
             (f"{book}.{tag}.max_drawdown_net", f"{book.upper()} net max drawdown", win, *base, (f"{book}.{tag}.max_drawdown_net",)),

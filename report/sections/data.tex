@@ -1,8 +1,14 @@
 \section{Data}
 Raw files come from the NSE static archives (cash bhavcopy in the legacy and UDiFF formats, delivery files, F\&O bhavcopy, index files),
 downloaded at no more than one request per second with an honest User-Agent and an on-disk cache. A permanent security id links symbol changes through
-ISIN. Prices are adjusted to total returns for splits, bonuses and dividends from NSE corporate-action exports; rights issues are not adjusted, demergers are
-nulled, and any residual one-day move above 25\% is classified by a jump audit and nulled if unexplained. The universe is rebuilt each month from data
+ISIN. NSE's corporate-action export (a manual, cookie-gated download) was not used. Splits and bonuses are instead inferred from the data
+(the PRD's fallback, refined): a one-day move above 25\% whose price ratio is within 12\% of a common split, bonus or consolidation ratio is treated as
+that action. For stocks without F\&O contracts this is safe, because their price bands (at most 20\%) rule out a genuine move of that size. F\&O
+stocks have no band, so the ratio must be confirmed by the implied lot size of a futures contract alive on both days (NSE changes the lot of existing
+contracts only for a corporate action) or by open interest; unconfirmed moves are genuine and kept (e.g.\ SBI $+28\%$ on 2017-10-25, Yes Bank $-56\%$ on
+2020-03-06), except demerger-like days (open interest up $\ge 1.8\times$ with the lot unchanged), which are nulled. Non-F\&O moves that match no ratio are nulled and logged.
+The bhavcopy's own previous-close field turned out not to be split-adjusted, so it could not be used. Dividends are not captured: stock returns are
+\emph{price} returns, and the long-only book is therefore compared with the Nifty 500 \emph{price} index. The universe is rebuilt each month from data
 dated before the month starts: EQ/BE series, at least 252 sessions of history, at least 55 trades in 63 sessions, close at least Rs 10, median traded value at least
-Rs 1 crore, top 750 by value. The Nifty 500 total-return index is approximate (price index plus dividend yield) unless an official file is supplied.
+Rs 1 crore, top 750 by value. 
 Data-quality gates and the survivorship counts are in the ledger (\texttt{data.*}).
