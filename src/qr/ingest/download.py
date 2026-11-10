@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -95,18 +96,22 @@ class Fetcher:
                     continue
                 self.done[(r["dataset"], r["date"])] = r["status"]
         self.client = httpx.Client(headers={"User-Agent": UA}, timeout=30, follow_redirects=False)
+        self._lock = threading.Lock()
 
     def _wait(self):
-        dtw = MIN_INTERVAL - (time.monotonic() - self._last)
-        if dtw > 0:
-            time.sleep(dtw)
-        self._last = time.monotonic()
+        """Global limiter: request STARTS are >= MIN_INTERVAL apart across all worker threads (<= 1 request/s, D-027)."""
+        with self._lock:
+            dtw = MIN_INTERVAL - (time.monotonic() - self._last)
+            if dtw > 0:
+                time.sleep(dtw)
+            self._last = time.monotonic()
 
     def _log(self, **r):
         r["ts"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-        with self.manifest.open("a") as f:
-            f.write(json.dumps(r) + "\n")
-        self.done[(r["dataset"], r["date"])] = r["status"]
+        with self._lock:
+            with self.manifest.open("a") as f:
+                f.write(json.dumps(r) + "\n")
+            self.done[(r["dataset"], r["date"])] = r["status"]
 
     def fetch(self, dataset: str, d: dt.date) -> str:
         """Return 'ok' | 'cached' | 'missing' (404 confirmed). Raises Blocked on 403/429."""
@@ -184,16 +189,19 @@ def weekdays(start: dt.date, end: dt.date):
 
 
 def run(start: dt.date, end: dt.date, root: Path = Path("data/raw"), only: list[str] | None = None,
-        fo_legacy_end: dt.date = LEGACY_END) -> dict:
+        fo_legacy_end: dt.date = LEGACY_END, workers: int = 2) -> dict:
+    """`workers` requests may be in flight at once (server latency ~1.9 s), but starts stay >= MIN_INTERVAL apart (D-027)."""
+    from concurrent.futures import ThreadPoolExecutor
+
     f = Fetcher(root)
     print("static:", fetch_statics(f), flush=True)
     counts: dict[str, int] = {}
-    for d in weekdays(start, end):
-        for ds in datasets_for(d, fo_legacy_end):
-            if only and ds not in only:
-                continue
-            s = f.fetch(ds, d)
-            counts[s.split(":")[0]] = counts.get(s.split(":")[0], 0) + 1
-        if d.day == 1 or d.weekday() == 0 and d.day <= 7:
-            print(d, counts, flush=True)
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for d in weekdays(start, end):
+            jobs = [ex.submit(f.fetch, ds, d) for ds in datasets_for(d, fo_legacy_end) if not (only and ds not in only)]
+            for j in jobs:                       # a day's files finish before the next day is queued; Blocked propagates
+                s = j.result()
+                counts[s.split(":")[0]] = counts.get(s.split(":")[0], 0) + 1
+            if d.day == 1 or d.weekday() == 0 and d.day <= 7:
+                print(d, counts, flush=True)
     return counts

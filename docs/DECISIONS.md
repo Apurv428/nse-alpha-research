@@ -161,3 +161,7 @@ Without corporate-action exports there are no dividends in stock returns (D-023)
 (`n500_close`), not the approximate TRI: comparing a price-return book with a total-return index would understate active return by roughly
 the index dividend yield (about 1-1.5% a year). If dividend data is added later, `build_panel` switches to the TRI automatically.
 P2's long cash leg also misses its dividends (conservative); the short futures leg is unaffected (dividends are in the futures basis).
+
+## D-027 Two requests in flight, starts still >= 1 s apart (2026-11-10)
+Server latency was ~1.9 s per file, so a strictly sequential client ran at ~0.5 request/s. The downloader now keeps up to two requests
+in flight while a global lock keeps request STARTS at least 1 s apart, i.e. still <= 1 request/s (test: test_download_limiter_*).

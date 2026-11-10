@@ -103,3 +103,19 @@ def test_decorator_logs_before_return(tmp_path, monkeypatch):
     out = run()
     assert (tmp_path / "t.jsonl").exists() and T.n_all(tmp_path / "t.jsonl") == 1
     assert out["trial"]["trial_id"]
+
+
+def test_download_limiter_spaces_request_starts_across_threads(tmp_path, monkeypatch):
+    import threading
+    import time
+
+    from qr.ingest import download as D
+    monkeypatch.setattr(D, "MIN_INTERVAL", 0.05)
+    f = D.Fetcher(tmp_path)
+    starts = []
+    def go():
+        f._wait(); starts.append(time.monotonic())
+    th = [threading.Thread(target=go) for _ in range(6)]
+    [t.start() for t in th]; [t.join() for t in th]
+    starts.sort()
+    assert min(b - a for a, b in zip(starts, starts[1:])) >= 0.049     # never two starts closer than the interval
