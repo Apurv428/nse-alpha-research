@@ -153,6 +153,7 @@ Unchanged: <= 1 request/s (start to start), honest User-Agent without personal d
 ## D-025 Real-data parser quirks (2026-11-10)
 - cm legacy 2020-07-13 uses a two-digit year in TIMESTAMP ("13-Jul-20"): parser accepts both formats; the in-file date must still equal the file date.
 - Some F&O legacy files write integer columns as decimals ("2630.0000000"): integer columns are cast via Float64.
+- Some index files (April 2023) write the date month-first ("04-06-2023" for 6 Apr): accepted only when that reading equals the file date.
 - Weekend special sessions (Muhurat, budget Saturdays) are never downloaded (weekday requests only). The next session's return then spans
   two sessions; this is correct for returns and is not adjusted.
 

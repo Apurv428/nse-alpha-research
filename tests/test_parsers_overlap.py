@@ -66,3 +66,15 @@ def test_legacy_two_digit_year_timestamp(tmp_path):
     assert parse_legacy(p, dt.date(2020, 7, 13)).height == 1
     with pytest.raises(ValueError):
         parse_legacy(p, dt.date(2020, 7, 14))
+
+
+def test_index_file_month_first_dates_accepted_only_when_they_match(tmp_path):
+    import datetime as dt
+
+    from qr.ingest.parse_mto import parse_index
+    p = tmp_path / "2023-04-06.csv"
+    p.write_text("Index Name,Index Date,Open Index Value,High Index Value,Low Index Value,Closing Index Value,Points Change,Change(%),"
+                 "Volume,Turnover (Rs. Cr.),P/E,P/B,Div Yield\nNifty 500,04-06-2023,1,1,1,14000,0,0,0,0,20,3,1.3\n")
+    assert parse_index(p, dt.date(2023, 4, 6))["close"][0] == 14000
+    with pytest.raises(ValueError):
+        parse_index(p, dt.date(2023, 4, 7))
