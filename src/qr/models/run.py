@@ -74,10 +74,11 @@ def run_combine(gold: Path = Path("data/gold"), silver: Path = Path("data/silver
     long = sc.select("trade_date", "sid", pl.col("model").alias("signal"), "score", "fold_id")
     ics = I.ic_series(long.select("trade_date", "sid", "signal", "score"), fwd, "score")
     fold_of = sc.select("trade_date", "fold_id").unique()
+    fold_ids = sorted(int(x) for x in folds["fold_id"].to_list())
     ics = ics.join(fold_of, on="trade_date")
     rows = []
     for m in MODELS:
-        for k in list(range(1, 9)) + ["all"]:
+        for k in fold_ids + ["all"]:
             g = ics.filter((pl.col("signal") == m) & (pl.col("h") == 5))
             g = g if k == "all" else g.filter(pl.col("fold_id") == k)
             x = g.sort("trade_date")["rank_ic"].drop_nulls().to_numpy()
@@ -91,12 +92,15 @@ def run_combine(gold: Path = Path("data/gold"), silver: Path = Path("data/silver
     piv = ics.filter(pl.col("h") == 5).pivot(on="signal", index=["trade_date", "fold_id"], values="rank_ic").sort("trade_date").drop_nulls()
     comp = {}
     fold_means = {m: summ.filter((pl.col("model") == m) & (pl.col("fold_id") != "all"))["mean_rank_ic_h5"].to_numpy() for m in MODELS}
+    bad = {m: int((~np.isfinite(v)).sum()) for m, v in fold_means.items() if not np.isfinite(v).all()}
+    if bad:  # a NaN fold mean would make every comparison False and silently select EW
+        raise ValueError(f"fold mean rank IC is not finite for {bad}: empty test fold or no scores; fix the data, do not select")
     for m in ("RIDGE", "LGBM"):
         diff = (piv[m] - piv["EW"]).to_numpy()
         nw = nw_tstat(diff, 5)
         wins = int((fold_means[m] > fold_means["EW"]).sum())
-        comp[m] = {"mean_diff": nw["mean"], "t_nw_diff": nw["t_nw"], "folds_beating_ew": wins, "n_folds": 8,
-                   "sign_test_p": float(binomtest(wins, 8, 0.5).pvalue), "mean_fold_ic": float(fold_means[m].mean())}
+        comp[m] = {"mean_diff": nw["mean"], "t_nw_diff": nw["t_nw"], "folds_beating_ew": wins, "n_folds": len(fold_ids),
+                   "sign_test_p": float(binomtest(wins, len(fold_ids), 0.5).pvalue), "mean_fold_ic": float(fold_means[m].mean())}
     cand = max(("RIDGE", "LGBM"), key=lambda m: comp[m]["mean_fold_ic"])
     ew_ic = float(fold_means["EW"].mean())
     beats = comp[cand]["mean_fold_ic"] > ew_ic and comp[cand]["t_nw_diff"] >= T_HURDLE_VS_EW

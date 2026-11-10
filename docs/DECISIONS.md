@@ -165,3 +165,14 @@ P2's long cash leg also misses its dividends (conservative); the short futures l
 ## D-027 Two requests in flight, starts still >= 1 s apart (2026-11-10)
 Server latency was ~1.9 s per file, so a strictly sequential client ran at ~0.5 request/s. The downloader now keeps up to two requests
 in flight while a global lock keeps request STARTS at least 1 s apart, i.e. still <= 1 request/s (test: test_download_limiter_*).
+
+## D-028 Accidental look at development-window results (2026-11-10) -- disclosed
+While rehearsing the eval/fit/backtest code on the partial real download (2016-01..2022-11), the forward returns were meant to be shuffled
+across stocks within each date so that no real signal-return relation could be seen. The shuffle was a no-op (rows were reordered by the
+random key, then values were reassigned in that same order). The researcher therefore saw, on partial development data only:
+(1) the combiner comparison printed by the selection step: ridge and LightGBM ahead of equal weight on the IC difference (t about 5.6 and 7.6);
+(2) MOM_12_1 raw-score rank IC 0.034 (t 3.7, h=5) from one ledger line; (3) P1/P2 one-way turnover (about 15x and 37x a year).
+No other output was opened and the scratch outputs were deleted. The OOS window was not touched (loaders clipped, lock sealed).
+Handling: the 33 trials that run logged (16 signal, 15 combo folds, 2 portfolio) are appended to trials/trials.jsonl with a note and count in
+N_all for the deflated Sharpe. Nothing pre-registered changes: signals, the selection rule, portfolio rules and costs stay as in prereg-v1.
+The same run exposed a real bug (fixed): a NaN fold mean made every comparison False, silently selecting EW; it now raises instead.
