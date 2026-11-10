@@ -107,7 +107,31 @@ def run_qa(silver: Path = Path("data/silver"), qa: Path = Path("runs/data_qa"), 
     um = inu.join(sec, on="sid", how="left").with_columns(pl.col("month_start").dt.year().alias("year"))
     uc = um.group_by("year").agg(share_unclassified=(pl.col("industry") == "Unclassified").mean()).sort("year")
     rep["unclassified_share_by_year"] = dict(zip(uc["year"].to_list(), [round(x, 4) for x in uc["share_unclassified"].to_list()]))
+    rep["sector_label_cutoff_sensitivity"] = sector_label_cutoff_sensitivity(silver, inu)
     from qr.guard.trial_ledger import git_state
     rep["git_sha"] = git_state()[0]
     (qa / "gate_report.json").write_text(json.dumps(rep, indent=1, default=str))
     return rep
+
+
+def sector_label_cutoff_sensitivity(silver: Path, inu: pl.DataFrame, raw: Path = Path("data/raw"),
+                                    cutoffs=("2014-12-31", "2017-12-31", "2019-12-31", "2021-12-31", "2023-12-31")) -> list[dict]:
+    """How much the NON-PIT sector labels (2026 snapshot) depend on the future: map the snapshot through the security master as it
+    was known at each cutoff and count sids whose label differs from the full-sample mapping (D-032). Later renames/ISIN changes are
+    the mechanism; affected names fall to Unclassified."""
+    import datetime as dt
+
+    from qr.panel.bench import build_sectors
+    m = pl.read_parquet(silver / "security_master" / "security_master.parquet")
+    man = raw / "_manifest.jsonl"
+    snaps = {r["date"]: r.get("snapshot") for r in map(json.loads, man.read_text().splitlines()) if r["dataset"] == "static"} if man.exists() else {}
+    full = build_sectors(m, raw / "static", snaps)
+    out = []
+    for c in cutoffs:
+        cd = dt.date.fromisoformat(c)
+        t = build_sectors(m.filter(pl.col("valid_from") <= cd), raw / "static", snaps)
+        j = full.join(t, on="sid", suffix="_t").filter(pl.col("industry") != pl.col("industry_t"))
+        ji = j.join(inu.filter(pl.col("month_start") <= cd).select("sid").unique(), on="sid")
+        out.append({"cutoff": c, "sids_label_differs": j.height, "of_which_ever_in_universe_by_cutoff": ji.height,
+                    "to_unclassified": int((ji["industry_t"] == "Unclassified").sum())})
+    return out

@@ -58,7 +58,10 @@ def _write_stage(df: pl.DataFrame, out: Path, name: str, inputs: dict, partition
 
 
 def build_silver(raw: Path = Path("data/raw"), bronze: Path = Path("data/bronze"), silver: Path = Path("data/silver"),
-                 qa: Path = Path("runs/data_qa")) -> dict:
+                 qa: Path = Path("runs/data_qa"), sectors_from: Path | None = None) -> dict:
+    """`sectors_from` (tests only): use this already-mapped sector table instead of mapping the 2026 snapshot through this build's
+    security master. Sector labels are a NON-PIT 2026 snapshot by design (PRD section 4); the real-data PIT test holds them fixed so
+    that it checks everything else bit for bit (D-032)."""
     raw, bronze, silver, qa = Path(raw), Path(bronze), Path(silver), Path(qa)
     qa.mkdir(parents=True, exist_ok=True)
     cm, mto, fo, idx = (_read(t, bronze) for t in ("cm_daily", "mto_daily", "fo_daily", "index_daily"))
@@ -73,7 +76,7 @@ def build_silver(raw: Path = Path("data/raw"), bronze: Path = Path("data/bronze"
     bench = build_bench(idx, raw / "manual" / "n500_tri.csv")
     snaps = {r["date"]: r.get("snapshot") for r in map(json.loads, (raw / "_manifest.jsonl").read_text().splitlines())
              if r["dataset"] == "static"} if (raw / "_manifest.jsonl").exists() else {}
-    sectors = build_sectors(master, raw / "static", snaps)
+    sectors = pl.read_parquet(sectors_from) if sectors_from else build_sectors(master, raw / "static", snaps)
     inputs = {"bronze_manifests": {t: json.loads((bronze / t / "_manifest.json").read_text())["inputs_hash"]
                                    for t in ("cm_daily", "mto_daily", "fo_daily", "index_daily") if (bronze / t / "_manifest.json").exists()},
               "corp_actions_files": sorted(p.name for p in ca_dir.glob("*.csv"))}

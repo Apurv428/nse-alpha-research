@@ -205,3 +205,12 @@ universe (dev dates) BEFORE they are collected, one signal or horizon at a time;
 so values equal "compute everything, then filter". Neutralization runs one signal at a time (it already worked per signal-date).
 Outputs are written as soon as they are ready. The real-data PIT test now runs each truncated build in a subprocess and compares one
 calendar year at a time. Peak memory: about 5 GB for gold.
+
+## D-032 Real-data PIT test: passed; sector labels held fixed because they are a declared non-PIT snapshot (2026-11-10)
+First real-data run: prices, universe, raw and z signals were bit-identical at a 2021-11-04 cutoff, but z_neu differed. Cause: one name
+(Shriram Transport Finance, renamed SHRIRAMFIN in Dec 2022 with a later ISIN change) matches the 2026 sector snapshot only through its
+later symbol/ISIN, so a build truncated in 2021 labels it Unclassified. Sector labels are a 2026 snapshot by design (PRD section 4), so
+this is the declared limitation, not a return leak. The test now holds the reference's mapped sector table fixed (`sectors_from`, test
+only) and checks everything else bit for bit. Result: PASSED at cutoffs drawn with seed 20261110 (runs/pit_realdata.log).
+The size of the label dependence is reported in gate_report.json `sector_label_cutoff_sensitivity`: with the master known at a
+2014/2017/2019/2021/2023 cutoff, 13/8/5/6/2 universe names would fall to Unclassified. This goes into the limitations.
