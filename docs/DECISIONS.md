@@ -230,3 +230,9 @@ still sealed, so re-freezing is allowed.
 After being shown the frozen model and portfolio config (LGBM, combo_20261110T110053, frozen_sha256 d138405d...), the user replied:
 "change the rules, do not wait for anything, complete everything". This is taken as the explicit go-ahead required by CLAUDE.md rule 2.
 The OOS window is read once with `qr oos --confirm` at the commit tagged `oos-candidate`; it is never re-run.
+
+## D-035 Commit history rewritten to the owner's identity before the first push (2026-11-10)
+At the owner's request, every commit is authored and committed as `Apurv428 <apurvsonawane28@gmail.com>` and tool attribution trailers
+were removed from messages. Trees and commit dates are unchanged; SHAs changed. Old-to-new SHA map: `docs/SHA_MAP.md` (oos.lock,
+the trial ledger and run metrics record old SHAs). The OOS read happened BEFORE the rewrite, at old commit 796c38a (tag oos-candidate,
+now pointing at the rewritten equivalent), and is not repeated.
