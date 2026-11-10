@@ -66,6 +66,9 @@ for book, main in (("p1", "ir"), ("p2", "sharpe")):
             (f"{book}.{tag}.{main}_net", f"{book.upper()} net {'IR vs Nifty 500 (price index)' if book == 'p1' else 'Sharpe on capital'}", win, *base, (f"{book}.{tag}.{main}_net",)),
             (f"{book}.{tag}.{main}_gross", f"{book.upper()} gross {'IR' if book == 'p1' else 'Sharpe'}", win, *base, (f"{book}.{tag}.{main}_gross",)),
             (f"{book}.{tag}.cagr_net", f"{book.upper()} net CAGR", win, *base, (f"{book}.{tag}.cagr_net",)),
+            (f"{book}.{tag}.cagr_gross", f"{book.upper()} gross CAGR", win, *base, (f"{book}.{tag}.cagr_gross",)),
+            (f"{book}.{tag}.vol_net", f"{book.upper()} net volatility (annualized)", win, *base, (f"{book}.{tag}.vol_net",)),
+            (f"{book}.{tag}.avg_holdings_long_net", f"{book.upper()} average long holdings", win, *base, (f"{book}.{tag}.avg_holdings_long_net",)),
             (f"{book}.{tag}.max_drawdown_net", f"{book.upper()} net max drawdown", win, *base, (f"{book}.{tag}.max_drawdown_net",)),
             (f"{book}.{tag}.turnover_oneway_pa", f"{book.upper()} one-way turnover per year", win, *base, (f"{book}.{tag}.turnover_oneway_pa",)),
             (f"{book}.{tag}.cap_unfilled_share", f"{book.upper()} share of desired trades blocked by the 10% ADV cap (Rs 1 crore)", win, *base, (f"{book}.{tag}.cap_unfilled_share",)),
@@ -73,10 +76,19 @@ for book, main in (("p1", "ir"), ("p2", "sharpe")):
             (f"{book}.{tag}.cost_drag_bp", f"{book.upper()} total cost drag, bp per year", win, "costs", d, "costs.csv", (book.upper(), "total")),
             (f"{book}.{tag}.stt_share_pct", f"{book.upper()} STT share of cost drag, %", win, "costs", d, "costs.csv", (book.upper(), "stt")),
         ]
+        if book == "p1":
+            REG += [(f"p1.{tag}.bench_cagr", "Nifty 500 price index CAGR", win, *base, (f"p1.{tag}.bench_cagr_net",)),
+                    (f"p1.{tag}.active_return_net", "P1 net active return vs benchmark (annualized)", win, *base, (f"p1.{tag}.active_return_net",)),
+                    (f"p1.{tag}.active_return_gross", "P1 gross active return vs benchmark (annualized)", win, *base, (f"p1.{tag}.active_return_gross",)),
+                    (f"p1.{tag}.tracking_error_net", "P1 net tracking error", win, *base, (f"p1.{tag}.tracking_error_net",)),
+                    (f"p1.{tag}.beta_net", "P1 net beta to benchmark", win, *base, (f"p1.{tag}.beta_net",))]
     REG += [(f"{book}.dev.capacity_cr", f"{book.upper()} capacity (smaller of half-metric and 20%-cap AUM), Rs crore", DEV, "json", "portfolios_*", "metrics.json", (f"{book}.capacity", "capacity_aum_cr")),
             (f"{book}.dev.break_even_cost_multiple", f"{book.upper()} break-even cost multiple", DEV, "json", "portfolios_*", "metrics.json", (f"{book}.break_even_cost_multiple",)),
             (f"{book}.oos.capacity_cr", f"{book.upper()} capacity, Rs crore", "2024-11-01 -> 2026-10-30", "json", "oos", "metrics.json", (f"{book}.capacity", "capacity_aum_cr"))]
 REG += [
+    ("p0.dev.sharpe_gross", "P0 decile long-short spread, gross Sharpe (weekly, equal weight)", DEV, "json", "portfolios_*", "metrics.json", ("p0.sharpe_gross",)),
+    ("data.min_universe", "Smallest monthly universe (names)", "2013-2024", "json", "data_qa", "gate_report.json", ("universe_names_per_month", "min")),
+    ("data.months_below_750", "Months with fewer than 750 universe names", "2013-2024", "json", "data_qa", "gate_report.json", ("universe_names_per_month", "months_below_750")),
     ("p1.dev.dsr", "P1 deflated Sharpe, walk-forward (N_all trials)", DEV, "json", "portfolios_*", "metrics.json", ("p1.dev.dsr_n_all",)),
     ("honesty.n_all", "Logged trials (N_all)", DEV, "json", "portfolios_*", "honesty_p1.json", ("n_all",)),
     ("honesty.n_eff", "Effective independent trials (N_eff, rho>0.7)", DEV, "json", "portfolios_*", "honesty_p1.json", ("n_eff",)),
@@ -97,6 +109,10 @@ def resolve(row, runs: Path):
         return NOT_RUN, None, None
     p = Path(d) / fname
     v = _costs(p, path[0], path[1]) if kind == "costs" else _dig(_json(p), path)
+    if path and path[-1] == "capacity_aum_cr" and v is not None:  # capacity is undefined when the book loses money net at Rs 1 crore
+        bk, tg = _id.split(".")[:2]
+        m = _dig(_json(p), (f"{bk}.{tg}.{'ir' if bk == 'p1' else 'sharpe'}_net",))
+        v = "none (net metric <= 0 at Rs 1 crore)" if m is not None and m <= 0 else v
     sha = (_json(p) or {}).get("git_sha") if kind != "costs" else (_json(p.with_name("metrics.json")) or {}).get("git_sha")
     return (NOT_RUN if v is None else v), (str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p)), sha
 
@@ -169,7 +185,7 @@ BULLETS = [
     "Built a survivorship-bias-free NSE daily equity panel from raw exchange archives: {data.n_sessions} sessions and {data.n_sids} securities, including {data.n_delisted_in_univ} later-delisted names that were in the liquid universe, 2012-2026. It merges two exchange file formats, uses ISIN-linked split, bonus and dividend adjustment and a point-in-time liquidity universe, and a truncation-based test checks it for look-ahead.",
     "Tested 8 point-in-time cross-sectional signals with Newey-West inference. The strongest sector-, beta- and size-neutral signal, {sig.best_neu.name}, reached a mean rank IC of {sig.best_neu.rank_ic_h5} (t = {sig.best_neu.t_nw_h5}, 5-day horizon, 2013-2024). {sig.n_pass_holm_t3} of 16 tests cleared a t >= 3 hurdle after Holm correction.",
     "Compared equal-weight z-score, ridge and LightGBM combiners under purged, embargoed walk-forward CV (8 folds). {combo.headline} achieved a rank IC of {combo.headline.rank_ic}, against {combo.ew.rank_ic} for equal weight (paired IC-difference t = {combo.diff_vs_ew.t_nw}).",
-    "Modelled Indian execution costs: time-varying STT including the 2026 futures hike, exchange fees, stamp duty, GST, Abdi-Ranaldo spreads and square-root impact. A long-only top-decile book against Nifty 500 TRI earned a walk-forward net IR of {p1.dev.ir_net} (gross {p1.dev.ir_gross}), with estimated capacity of Rs {p1.dev.capacity_cr} crore.",
+    "Modelled Indian execution costs: time-varying STT including the 2026 futures hike, exchange fees, stamp duty, GST, Abdi-Ranaldo spreads and square-root impact. A long-only top-decile book against the Nifty 500 index earned a walk-forward net IR of {p1.dev.ir_net} (gross {p1.dev.ir_gross}), at {p1.dev.turnover_oneway_pa}x one-way turnover a year; capacity: {p1.dev.capacity_cr}.",
     "Enforced research hygiene with a pre-registered protocol, a lock-file-guarded 24-month holdout read once, and {honesty.n_all} logged trials (N_eff = {honesty.n_eff}). Holdout results: long-only net IR {p1.oos.ir_net} (95% CI {p1.oos.ir_net.ci95_lo}, {p1.oos.ir_net.ci95_hi}). F&O long-short net Sharpe {p2.oos.sharpe_net}. Deflated Sharpe {p1.dev.dsr} (development window).",
 ]
 NULL5 = "Holdout net IR was {p1.oos.ir_net} (95% CI {p1.oos.ir_net.ci95_lo}, {p1.oos.ir_net.ci95_hi}). A gross edge of {p1.oos.ir_gross} did not survive {p1.oos.cost_drag_bp} bp a year of costs, {p1.oos.stt_share_pct}% of them STT. Deflated Sharpe {p1.dev.dsr}."

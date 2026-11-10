@@ -9,17 +9,17 @@ Weak or negative results are reported as plainly as strong ones. Full detail: `r
 <!-- RESULTS:BEGIN -->
 | ID | Quantity | Window | Value |
 | --- | --- | --- | --- |
-| `p1.oos.ir_net` | P1 net IR vs Nifty 500 (price index) | 2024-11-01 -> 2026-10-30 | not run |
-| `p1.oos.ir_net.ci95_lo` | P1 OOS net IR, bootstrap 95% CI low | 2024-11-01 -> 2026-10-30 | not run |
-| `p1.oos.ir_net.ci95_hi` | P1 OOS net IR, bootstrap 95% CI high | 2024-11-01 -> 2026-10-30 | not run |
-| `p1.oos.ir_gross` | P1 gross IR | 2024-11-01 -> 2026-10-30 | not run |
-| `p2.oos.sharpe_net` | P2 net Sharpe on capital | 2024-11-01 -> 2026-10-30 | not run |
-| `p1.dev.ir_net` | P1 net IR vs Nifty 500 (price index) | 2017-01-02 -> 2024-10-31 | not run |
-| `p1.dev.ir_gross` | P1 gross IR | 2017-01-02 -> 2024-10-31 | not run |
-| `p1.dev.dsr` | P1 deflated Sharpe, walk-forward (N_all trials) | 2017-01-02 -> 2024-10-31 | not run |
-| `honesty.n_all` | Logged trials (N_all) | 2017-01-02 -> 2024-10-31 | not run |
-| `honesty.n_eff` | Effective independent trials (N_eff, rho>0.7) | 2017-01-02 -> 2024-10-31 | not run |
-| `p1.dev.capacity_cr` | P1 capacity (smaller of half-metric and 20%-cap AUM), Rs crore | 2017-01-02 -> 2024-10-31 | not run |
+| `p1.oos.ir_net` | P1 net IR vs Nifty 500 (price index) | 2024-11-01 -> 2026-10-30 | -1.406 |
+| `p1.oos.ir_net.ci95_lo` | P1 OOS net IR, bootstrap 95% CI low | 2024-11-01 -> 2026-10-30 | -2.989 |
+| `p1.oos.ir_net.ci95_hi` | P1 OOS net IR, bootstrap 95% CI high | 2024-11-01 -> 2026-10-30 | -0.034 |
+| `p1.oos.ir_gross` | P1 gross IR | 2024-11-01 -> 2026-10-30 | 0.852 |
+| `p2.oos.sharpe_net` | P2 net Sharpe on capital | 2024-11-01 -> 2026-10-30 | -4.448 |
+| `p1.dev.ir_net` | P1 net IR vs Nifty 500 (price index) | 2017-01-02 -> 2024-10-31 | -0.917 |
+| `p1.dev.ir_gross` | P1 gross IR | 2017-01-02 -> 2024-10-31 | 1.728 |
+| `p1.dev.dsr` | P1 deflated Sharpe, walk-forward (N_all trials) | 2017-01-02 -> 2024-10-31 | 0.000 |
+| `honesty.n_all` | Logged trials (N_all) | 2017-01-02 -> 2024-10-31 | 76 |
+| `honesty.n_eff` | Effective independent trials (N_eff, rho>0.7) | 2017-01-02 -> 2024-10-31 | 21 |
+| `p1.dev.capacity_cr` | P1 capacity (smaller of half-metric and 20%-cap AUM), Rs crore | 2017-01-02 -> 2024-10-31 | none (net metric <= 0 at Rs 1 crore) |
 <!-- RESULTS:END -->
 
 ## What is in here
