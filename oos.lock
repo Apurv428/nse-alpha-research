@@ -1,12 +1,12 @@
 {
- "state": "sealed",
+ "state": "opened",
  "dev_end": "2024-10-31",
  "oos_start": "2024-11-01",
  "oos_end": "2026-10-30",
  "created_at": "2026-11-09T20:28:07+00:00",
  "prereg_commit": "5fa0385ce340d5561d32d1bcb9c4a937abbed2b1",
- "opened_at": null,
- "opened_commit": null,
+ "opened_at": "2026-11-10T13:38:46+00:00",
+ "opened_commit": "796c38a33ed1c2179ef791d5a5e3d60e514f45c3",
  "headline": {
   "model": "LGBM",
   "portfolio": {
