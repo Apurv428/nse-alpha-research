@@ -33,7 +33,9 @@ def _counts(s) -> dict:
 
 def _read(table: str, bronze: Path) -> pl.DataFrame:
     files = sorted((bronze / table).glob("year=*.parquet"))
-    return pl.concat([pl.read_parquet(f) for f in files], how="vertical_relaxed") if files else pl.DataFrame()
+    # file_sha (64-char hex per row) is bronze provenance only; dropping it here keeps the full 2012-2026 build inside ~7 GB RAM
+    rd = lambda f: (lambda d: d.drop([c for c in ("file_sha",) if c in d.columns]))(pl.read_parquet(f))
+    return pl.concat([rd(f) for f in files], how="vertical_relaxed") if files else pl.DataFrame()
 
 
 def _write_stage(df: pl.DataFrame, out: Path, name: str, inputs: dict, partition_year: str | None = None) -> None:

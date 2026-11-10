@@ -36,7 +36,7 @@ def parse_mto(path: Path, trade_date: dt.date) -> pl.DataFrame:
 def parse_index(path: Path, trade_date: dt.date) -> pl.DataFrame:
     df = pl.read_csv(Path(path), infer_schema_length=0, truncate_ragged_lines=True)
     df = df.rename({c: c.strip() for c in df.columns})
-    raw = df["Index Date"].str.strip_chars()
+    raw = df["Index Date"].str.strip_chars().str.replace_all("/", "-")  # some 2014-15 files use 09/06/2014
     d = raw.str.to_date("%d-%m-%Y", strict=False).unique().to_list()
     if d != [trade_date]:  # some 2023 files are month-first (04-06-2023 for 6 Apr): accept only if that reading matches the file date
         alt = raw.str.to_date("%m-%d-%Y", strict=False).unique().to_list()

@@ -177,3 +177,24 @@ No other output was opened and the scratch outputs were deleted. The OOS window 
 Handling: the 33 trials that run logged (16 signal, 15 combo folds, 2 portfolio) are appended to trials/trials.jsonl with a note and count in
 N_all for the deflated Sharpe. Nothing pre-registered changes: signals, the selection rule, portfolio rules and costs stay as in prereg-v1.
 The same run exposed a real bug (fixed): a NaN fold mean made every comparison False, silently selecting EW; it now raises instead.
+
+## D-029 Full-sample build fixes: old-file date formats and memory (2026-11-10)
+The 2012-2015 files exposed two more format quirks: one legacy F&O file (2012-05-14) uses two-digit years in TIMESTAMP and EXPIRY_DT,
+and 59 index-close files (2014-06..2015-05) write dates as 09/06/2014. Both parsers now accept these forms and still reject a file
+whose in-file date differs from its filename date (tests in test_parsers_overlap.py). A full pre-scan parses all 14,714 raw files without error.
+282 files of 2012-2015 were not available from NSE (manifest `missing`), and the data QA reports them.
+The full 2012-2026 silver build was killed for running out of memory on the 7 GB workspace. Fix (no change to any output value): drop the
+per-row `file_sha` provenance column when bronze is read into the panel build (it stays in bronze), and run the panel step with
+POLARS_MAX_THREADS=1 and MALLOC_ARENA_MAX=2 (peak about 5.6 GB). Single-threaded Polars matches the D-016 determinism setting.
+
+## D-030 Two data-QA gates not met on the full sample; both are genuine and disclosed, rules unchanged (2026-11-10)
+(1) Sessions per year: 2014 has 243 and 2019 has 244 (gate 245-252). The weekdays with no files are the same across CM, MTO and F&O
+(18 in 2014, 17 in 2019), which matches extra exchange holidays in general-election years (polling days). These are real closures, not
+download gaps, so nothing is filled. Weekend special sessions (for example, Muhurat trading and the 2015-02-28 Budget Saturday) are not
+requested, because the PRD asks for weekdays only.
+(2) Universe of 750 names from 2013-02: not met in 91 of 165 months (minimum 276 in 2013; the cap of 750 binds from about 2018 onward).
+Diagnosis (runs/data_qa + scratch check): in Jan 2013, 1,263 names pass series/age/traded/close but only 386 have a 63-day median traded
+value >= Rs 1 crore; Jan 2017: 1,321 vs 568. The absolute Rs 1 crore floor (PRD section 4, a fixed decision) binds while Indian cash
+turnover was lower. The rule stays as pre-registered. Changing it now would be an undisclosed post-Day-1 change. Consequence, reported
+in the limitations: the early cross-section is smaller (decile portfolios have about 30-60 names before 2018) and is tilted to larger,
+more liquid names.

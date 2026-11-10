@@ -78,3 +78,28 @@ def test_index_file_month_first_dates_accepted_only_when_they_match(tmp_path):
     assert parse_index(p, dt.date(2023, 4, 6))["close"][0] == 14000
     with pytest.raises(ValueError):
         parse_index(p, dt.date(2023, 4, 7))
+
+
+def test_fo_legacy_two_digit_year(tmp_path):
+    import zipfile
+
+    from qr.ingest.parse_fo import parse_legacy
+    csv = ("INSTRUMENT,SYMBOL,EXPIRY_DT,STRIKE_PR,OPTION_TYP,OPEN,HIGH,LOW,CLOSE,SETTLE_PR,CONTRACTS,VAL_INLAKH,OPEN_INT,CHG_IN_OI,TIMESTAMP\n"
+           "FUTSTK,AAA,31-May-12,0,XX,1,1,1,100,100,5,1.5,1000,0,14-May-12\n")
+    p = tmp_path / "2012-05-14.csv.zip"
+    with zipfile.ZipFile(p, "w") as z:
+        z.writestr("fo14MAY2012bhav.csv", csv)
+    df = parse_legacy(p, dt.date(2012, 5, 14))
+    assert df.height == 1 and df["expiry"][0] == dt.date(2012, 5, 31)
+    with pytest.raises(ValueError):
+        parse_legacy(p, dt.date(2012, 5, 15))
+
+
+def test_index_file_slash_dates(tmp_path):
+    from qr.ingest.parse_mto import parse_index
+    p = tmp_path / "2014-06-09.csv"
+    p.write_text("Index Name,Index Date,Open Index Value,High Index Value,Low Index Value,Closing Index Value,Points Change,Change(%),"
+                 "Volume,Turnover (Rs. Cr.),P/E,P/B,Div Yield\nCNX 500,09/06/2014,1,1,1,6000,0,0,0,0,20,3,1.3\n")
+    assert parse_index(p, dt.date(2014, 6, 9))["close"][0] == 6000
+    with pytest.raises(ValueError):
+        parse_index(p, dt.date(2014, 6, 10))

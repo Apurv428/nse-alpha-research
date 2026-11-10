@@ -16,16 +16,23 @@ def _read(path: Path):
         return z.read(z.namelist()[0]), hashlib.sha256(raw).hexdigest()
 
 
+def _dmy(col: pl.Series | str):
+    """Legacy F&O dates are "14-MAY-2012"; a few files use a two-digit year ("14-May-12", e.g. 2012-05-14)."""
+    c = pl.col(col) if isinstance(col, str) else col
+    s = c.str.strip_chars()
+    return pl.when(s.str.len_chars() == 11).then(s.str.to_date("%d-%b-%Y", strict=False)).otherwise(s.str.to_date("%d-%b-%y", strict=False))
+
+
 def parse_legacy(path: Path, trade_date: dt.date) -> pl.DataFrame:
     data, sha = _read(path)
     df = pl.read_csv(io.BytesIO(data), infer_schema_length=0, truncate_ragged_lines=True)
     df = df.rename({c: c.strip() for c in df.columns}).filter(pl.col("INSTRUMENT").str.strip_chars() == "FUTSTK")
-    fd = df["TIMESTAMP"].str.to_date("%d-%b-%Y").unique().to_list()
+    fd = df.select(_dmy("TIMESTAMP"))["TIMESTAMP"].unique().to_list()
     if fd and fd != [trade_date]:
         raise ValueError(f"{path}: in-file dates {fd} != filename date {trade_date}")
     return df.select(
         pl.lit(trade_date).alias("trade_date"), pl.col("SYMBOL").str.strip_chars().alias("symbol"),
-        pl.col("EXPIRY_DT").str.to_date("%d-%b-%Y").alias("expiry"),
+        _dmy("EXPIRY_DT").alias("expiry"),
         pl.col("CLOSE").cast(pl.Float64).alias("close"), pl.col("SETTLE_PR").cast(pl.Float64).alias("settle"),
         pl.col("CONTRACTS").cast(pl.Float64).cast(pl.Int64).alias("contracts"),
         (pl.col("VAL_INLAKH").cast(pl.Float64) * 1e5).alias("value_inr"),
