@@ -1,5 +1,5 @@
 {
- "state": "opened",
+ "state": "read",
  "dev_end": "2024-10-31",
  "oos_start": "2024-11-01",
  "oos_end": "2026-10-30",
@@ -31,5 +31,5 @@
    "combo_run": "combo_20261110T110053"
   }
  },
- "results_sha256": null
+ "results_sha256": "d26852ea374ec9f61b50cc3c4c51351f2a86bc90e8323d01038dad38a74f9fc7"
 }
